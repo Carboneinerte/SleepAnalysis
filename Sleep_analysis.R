@@ -1,7 +1,6 @@
 ###TODO
 ### Autosave figures?
 ### Made as a function......
-### Test for Github
 
 ######### Required package ##########
 if(!require(tidyr)){install.packages("tidyr")}
