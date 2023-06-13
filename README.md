@@ -1,6 +1,6 @@
 # SleepAnalysis
 
-Only Sleep_Analysis is currently working.
+Only Sleep_analysis.R is currently working.
 
 Run the whole file in Rstudio first. It will load/install the required packages.
 
