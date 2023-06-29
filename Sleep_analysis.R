@@ -1,8 +1,6 @@
 ###TODO
 ### Autosave figures?
-### Made as a function......
-
-
+### Detailed bouts analysis
 
 Sleep_analysis = function(file_path){
   
@@ -163,10 +161,10 @@ for (t in date){
                      length(df_one$Wake[df_one$ZT<12 & df_one$Date ==t]),
                      length(df_one$Sleep[df_one$ZT<12 & df_one$Date ==t]),
                      length(df_one$Paradoxical[df_one$ZT<12 & df_one$Date ==t]))
-  
+
   Mean_Dark_day = c(mean(df_one$Wake[df_one$ZT>=12 & df_one$Date ==t]),
                      mean(df_one$Sleep[df_one$ZT>=12 & df_one$Date ==t]),
-                     mean(df_one$Paradoxical[df_one$ZT<12 & df_one$Date ==t]),
+                     mean(df_one$Paradoxical[df_one$ZT>=12 & df_one$Date ==t]),
                      sd(df_one$Wake[df_one$ZT>=12&df_one$Date ==t]),
                      sd(df_one$Sleep[df_one$ZT>=12&df_one$Date ==t]),
                      sd(df_one$Paradoxical[df_one$ZT>=12&df_one$Date ==t]),
@@ -186,11 +184,15 @@ mean_table = data.frame()
 for (y in ZT){
   ZT_mean = c(mean(df_one$Wake[df_one$ZT == y]),mean(df_one$Sleep[df_one$ZT == y]),mean(df_one$Paradoxical[df_one$ZT == y]),
               sd(df_one$Wake[df_one$ZT ==y]),sd(df_one$Sleep[df_one$ZT ==y]),sd(df_one$Paradoxical[df_one$ZT ==y]),
-              length(df_one$Wake[df_one$ZT == y]),length(df_one$Sleep[df_one$ZT==y]),length(df_one$Paradoxical[df_one$ZT==y])
+              length(df_one$Wake[df_one$ZT == y]),length(df_one$Sleep[df_one$ZT==y]),length(df_one$Paradoxical[df_one$ZT==y]),
+              nrow(RawData[RawData$rodent_sleep == "W" & RawData$ZT == y,])/nrow(RawData[RawData$ZT == 0,])*100,
+              nrow(RawData[RawData$rodent_sleep == "S" & RawData$ZT == y,])/nrow(RawData[RawData$ZT == 0,])*100,
+              nrow(RawData[RawData$rodent_sleep == "P" & RawData$ZT == y,])/nrow(RawData[RawData$ZT == 0,])*100
               )
   
   mean_table = rbind(mean_table, ZT_mean)
-  names(mean_table) = c("Wake","Sleep","Paradoxical","Wake_SD","Sleep_SD","Paradoxical_SD","N_Wake","N_Sleep","N_Paradoxical")
+  names(mean_table) = c("Wake","Sleep","Paradoxical","Wake_SD","Sleep_SD","Paradoxical_SD","N_Wake","N_Sleep","N_Paradoxical",
+                        "Percent_Wake","Percent_Sleep","Percent_Paradoxical")
 }
 
 df_ZT_Mean = cbind(df_ZT_Mean,mean_table)
@@ -462,8 +464,8 @@ setwd("output")
 
 splits=unlist(data.table::tstrsplit(file_path,"/", fill=NA, type.convert=FALSE, names=F))
 
-exp_name = splits[1]
-file_name = splits[2]
+exp_name = splits[2]
+file_name = paste0(splits[3],"_",splits[2])
 if (dir.exists(exp_name)==F){
   dir.create(exp_name)
 }
