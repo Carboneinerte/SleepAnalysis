@@ -2,7 +2,8 @@
 
 Only Sleep_analysis.R is currently working.
 
-Run the whole file in Rstudio first. It will load/install the required packages.
+Open the file in Rstudio. Select all (Ctrl + A) and Run it.
+The required packages will be automatically installed if needed.
 
 Then call the function as follow:
 
