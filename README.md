@@ -12,3 +12,6 @@ Sleep_Analysis("path/of/the/folder")
 Argument must be the path to the folder containing all the .csv files (from the same animal, same recording session), between quotation marks.  Ex: "2023-03-03/2670"
 
 Output file will be saved in a folder called output.
+
+
+An alternative way to analyze multiple recording sessions is detailed at the end of the Sleep_analysis file. 
