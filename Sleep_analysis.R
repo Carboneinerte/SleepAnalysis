@@ -541,7 +541,7 @@ print(paste0("Successful Analysis of ",ID))
 
 
 
-Sleep_select = function(criteria){
+Sleep_select = function(criteria="csv"){
 
   crit = as.character(criteria)
   
