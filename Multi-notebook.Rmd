@@ -3,49 +3,34 @@ title: "Sleep Multi Analysis"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+Requested packages:
 
 ```{r}
  if(!require(openxlsx)){install.packages("openxlsx")}
   if(!require(ggplot2)){install.packages("ggplot2")}
+if(!require(tidyr)){install.packages("tidyr")}
+if(!require(tidyverse)){install.packages("tidyverse")}
+
   if(!require(matrixStats)){install.packages("matrixStats")}
 if(!require(rlang)){install.packages("rlang")}
 rm(list = ls())
 ```
-
-<!-- Choose criteria for files to open (crit) and parameter to analyse (para\_) -->
-
-```{r}
-# crit = c("Blue","Chronic")
-# para_ = "count_mean"
-
-# if (!is_empty(sheet_list)){
-#   print("list of Sheet:")
-#   print(sheet_list)
-#   print(" ")
-#   print("List of Paramaters available in currently selected sheet:")
-#   print(names_col)
-# }
-```
-
 Determine which animals need to be analysed for APP and WT (just comment those to exclude)
 
 //!\\ Make sure the coma are right if you exclude some animals. Errors will show if you don't.
 
 ```{r}
   APP = c(
-    "2504",
+    #"2504",
     #"2505",
     "3160",
     "3161"
     )
   WT = c(
-    #"2670",
-    "2671",
-    "3086"
-    #,"3159"
+    "2670"
+    #"2671",
+    #"3086",
+    #"3159"
   )
 
 ```
@@ -53,7 +38,7 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 Choose the criteria to open files:
 
 ```{r}
-crit = c("Green","Chronic")
+crit = c("TRF","Pulse2")
 ```
 
 Importation of the list of files matching the criteria (crit2)
@@ -72,36 +57,32 @@ Importation of the list of files matching the criteria (crit2)
   setwd("output")
   a_unique = unique(list.files(pattern = crit2, recursive = T, ignore.case = T))
   setwd(base_folder)
-  #file_path = paste0("output/",a_unique[3])
   file_path = paste0("output/",a_unique)
-  #files_pathway = list.files(path = file_path, pattern = "*.xlsx", full.names = T)
   files_pathway = file_path
-  #list_of_files = list.files(path = file_path, pattern = "*.xlsx", full.names = F)
-  
-  # list_of_files_data = paste0("Data_",list_of_files)
-  # list_of_files_data = gsub(".xlsx","", list_of_files_data)
   list_of_files_df = data.frame(file_name = c())
   sheet_list = getSheetNames(files_pathway[1])
   print(sheet_list)
-  # sheet_to_open = sheet_list[9] ### TODO include in the parameters TODO
 ```
 
 Choose the sheet to open:
 
 ```{r}
-sheet_to_open = "Bouts-ZT-Mean"
+#Only "ZT" sheets are supported for now
+sheet_to_open = "Phase - Mean"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
 
 ```{r}
-
+list_of_files_df = data.frame()
  for (a in 1:length(files_pathway)){
     list_of_files = unlist(data.table::tstrsplit(a_unique[a],"/", fill=NA, type.convert=FALSE, names=F))[2]
     list_of_files_data = paste0("Data_",list_of_files)
     list_of_files_data = gsub(".xlsx","", list_of_files_data)
     list_of_files_df = rbind(list_of_files_df, list_of_files_data)
     temp_ = read.xlsx(files_pathway[a],sheet = sheet_to_open)
+    if (names(temp_)[1]== "ZT"){
+      temp_ = arrange(temp_, ZT)}
     names_col = names(temp_)
     splits_temp=unlist(data.table::tstrsplit(list_of_files,"_", fill=NA, type.convert=FALSE, names=F))
     new_names_col = paste0(names_col,"_",splits_temp[2],"_",splits_temp[1])
@@ -122,7 +103,7 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_="Bouts_S_Mean.(min)"
+para_=   "Mean_Phase_one"
 
 ```
 
@@ -130,8 +111,10 @@ Combine the column selected with para\_
 
 ```{r}
   ###Combine DF
-  ZT = seq(0,22, by=2)
-  combine_df = data.frame(ZT)
+  #ZT = seq(0,22, by=2)
+  x_axis = temp_[1]  
+  combine_df = data.frame(x_axis = x_axis)
+  names(combine_df)="x_axis"
   col_added_name_2 = c()
   parameter_to_analyse = which(names_col == para_)
   for (i in 1:nrow(list_of_files_df)) {
@@ -151,9 +134,10 @@ Combine the column selected with para\_
 head(combine_df)
 ```
 
-Calculate the average and SD
+Calculate the average and SD, then save as xlsx
 
 ```{r}
+
   if (length(APP)>1){
     APP_comb = c(APP[1])
     for (a in 2:length(APP)){
@@ -161,10 +145,12 @@ Calculate the average and SD
     }
     combine_df$APP_mean = rowMeans(combine_df[, grep(APP_comb, names(combine_df))])
     combine_df$APP_SD = rowSds(as.matrix(combine_df[, grep(APP_comb, names(combine_df))]))
+    combine_df$APP_SEM = (combine_df$APP_SD / length(APP))
   } else {
     APP_comb = APP
     combine_df$APP_mean = combine_df[, grep(APP_comb, names(combine_df))]
     combine_df$APP_SD = rep(NA,nrow(combine_df))
+    combine_df$APP_SEM = rep(NA,nrow(combine_df))
   }
 
  if (length(WT)>1){
@@ -174,40 +160,88 @@ Calculate the average and SD
     }
     combine_df$WT_mean = rowMeans(combine_df[, grep(WT_comb, names(combine_df))])
     combine_df$WT_SD = rowSds(as.matrix(combine_df[, grep(WT_comb, names(combine_df))]))
+    combine_df$WT_SEM = (combine_df$WT_SD / length(WT))
   } else {
     WT_comb = WT
     combine_df$WT_mean = combine_df[, grep(WT_comb, names(combine_df))]
     combine_df$WT_SD = rep(NA,nrow(combine_df))
+    combine_df$WT_SEM = rep(NA,nrow(combine_df))
   }
-head(combine_df[,(length(combine_df)-3):length(combine_df)])
+head(combine_df[,(length(combine_df)-5):(length(combine_df))])
+
+testwb = createWorkbook()
+addWorksheet(testwb, para_)
+writeData(testwb,para_, x=combine_df)
+filename = paste0("combine_df/",names(col_to_add),".xlsx")
+saveWorkbook(testwb, file = filename, overwrite = T)
 ```
 
 Create GraphPlot
 
 ```{r}
-g = ggplot(combine_df, aes(x=ZT))+
-    geom_point(aes(y =APP_mean), size=3, shape = 3, color="#0040FF")+
-    geom_line(aes(y = APP_mean),linewidth = 1, color = "#0040FF")+
-    geom_errorbar(aes(ymin = APP_mean-APP_SD, ymax = APP_mean+APP_SD), width = 0.25)+
-    geom_point(aes(y=WT_mean), size = 3, shape = 3, color = "#FFA500")+
-    geom_line(aes(y=WT_mean),linewidth = 1, color = "#FFA500")+
-    geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
-    labs(y=names(col_to_add))+
+if (is.numeric(combine_df$x_axis)){
+  g = ggplot(combine_df, aes(x=x_axis))+
+    geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
+    geom_point(aes(y =APP_mean), size=2, shape = 3)+
+    geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
+    geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
+    geom_point(aes(y=WT_mean), size = 2, shape = 3)+
+    geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
+    labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
+    geom_vline(xintercept = 11.75, linetype = "dotted")+
+    scale_x_continuous(limits = c(-1,24), n.breaks=14)+
+    scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
+                     labels = c(APP = "APP", WT = "WT")) +
+    #geom_vline(xintercept = c(14,22), linetype ="dashed")+
+    #geom_vline(xintercept = c(16,18))+
     #ylim(0,NA)+
     theme_classic()
-  
+      if (crit2 == ".+TRF.+Chronic"){
+      g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")
+      } else if (crit2 == ".+TRF.+Light"){
+                g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")+
+                geom_vline(xintercept = c(15.75,17.25))
+      } else if (crit2 == ".+TRF.+Pulse2"){
+                g = g + geom_vline(xintercept = c(15.75,17.25))
+      }
+} else if (is.character(combine_df$x_axis)){
+    #combine_df$x_axis = fct_inorder(combine_df$x_axis)
+    combine_df$x_axis_continuous = seq(1,nrow(combine_df),by = 1)
+    custom_labels <- c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+")
+    
+    g = ggplot(combine_df, aes(x=x_axis_continuous))+
+      geom_point(aes(y =APP_mean), size=3, shape = 3)+
+      geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
+      geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
+      geom_point(aes(y=WT_mean), size = 3, shape = 3)+
+      geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
+      geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
+      labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
+      scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
+                     labels = c(APP = "APP", WT = "WT")) +
+      scale_x_continuous(n.breaks = 8, labels = c("0", "0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+"))+
+      theme_classic()
+      
+      # geom_col(aes(x= x_axis, y=APP_mean), position="dodge", fill = "#0040FF")+
+      # geom_errorbar(aes(ymin = APP_mean-APP_SD, ymax = APP_mean+APP_SD), width = 0.25)+
+      # geom_col(aes(x= x_axis, y=WT_mean), position="dodge", fill="#FFA500")+
+      # geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
+      # theme_classic()
+} else {print("Unrecognized x-axis")}
   print(g)
 ```
 
 Combine APP and WT as same column for stat analysis
 
 ```{r}
+if (is.numeric(combine_df$x_axis)){
+ZT2 = seq(min(combine_df$x_axis), max(combine_df$x_axis), by = (combine_df$x_axis[2]-combine_df$x_axis[1]))
 combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
   ALLAPP=c()
   for (a in 1:length(combine_APP)){
     ALLAPP = c(ALLAPP,combine_APP[,a])
   } 
-  all_APP_df = data.frame(ZT=as.factor(rep(ZT, length(combine_APP))),Geno=rep("APP", length(combine_APP)*nrow(combine_APP)), Param = ALLAPP)
+  all_APP_df = data.frame(ZT=as.factor(rep(ZT2, length(combine_APP))),Geno=rep("APP", length(combine_APP)*nrow(combine_APP)), Param = ALLAPP)
   
   combine_WT = combine_df[, grep(WT_comb, names(combine_df))]
   ALLWT=c()
@@ -215,19 +249,21 @@ combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
     for (a in 1:length(combine_WT)){
       ALLWT = c(ALLWT,combine_WT[,a])
     }
-    all_WT_df = data.frame(ZT=as.factor(rep(ZT, length(combine_WT))),Geno=rep("WT", length(combine_WT)*nrow(combine_WT)), Param = ALLWT)
+    all_WT_df = data.frame(ZT=as.factor(rep(ZT2, length(combine_WT))),Geno=rep("WT", length(combine_WT)*nrow(combine_WT)), Param = ALLWT)
     
   } else {
     ALLWT = combine_WT
-    all_WT_df = data.frame(ZT, Geno = rep("WT",12), Param =ALLWT)
+    all_WT_df = data.frame(ZT = ZT2, Geno = rep("WT",length(ZT2)), Param =ALLWT)
   }
+} else {print("Not implemented yet")}
 ```
 
 Two way analysis
 
 ```{r}
- 
+ if (is.numeric(combine_df$x_axis)){
   All_APP_WT = rbind(all_APP_df,all_WT_df)
   res.aov2 = aov(Param~ZT+Geno, data=All_APP_WT)
   summary(res.aov2)
+ } else {print("Not implemented yet")}
 ```
