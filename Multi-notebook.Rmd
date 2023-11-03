@@ -1,4 +1,6 @@
 ---
+# Heading1
+
 title: "Sleep Multi Analysis"
 output: html_notebook
 ---
@@ -15,22 +17,24 @@ if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(rlang)){install.packages("rlang")}
 rm(list = ls())
 ```
+
 Determine which animals need to be analysed for APP and WT (just comment those to exclude)
 
 //!\\ Make sure the coma are right if you exclude some animals. Errors will show if you don't.
 
 ```{r}
+
   APP = c(
     #"2504",
-    #"2505",
+    "2505",
     "3160",
     "3161"
     )
   WT = c(
-    "2670"
-    #"2671",
-    #"3086",
-    #"3159"
+    "2670",
+   #"2671",
+    "3086",
+    "3159"
   )
 
 ```
@@ -38,17 +42,21 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 Choose the criteria to open files:
 
 ```{r}
-crit = c("TRF","Pulse2")
+crit = c("Green","Acute")
+
 ```
 
 Importation of the list of files matching the criteria (crit2)
 
 ```{r}
-  crit2=c()
+  crit2 = c()
+  crit3 = c()
   for (b in crit){
-    if (is_empty(crit)){
+    if (is_empty(crit2)){
       crit2 = paste0(b)
+      crit3 = paste0(b)
     } else {crit2=paste0(crit2,".+",b)
+            crit3=paste0(crit3,"_",b)
     }
   }
   
@@ -58,6 +66,7 @@ Importation of the list of files matching the criteria (crit2)
   a_unique = unique(list.files(pattern = crit2, recursive = T, ignore.case = T))
   setwd(base_folder)
   file_path = paste0("output/",a_unique)
+  file_path = file_path[grep("~", file_path, invert = T)]
   files_pathway = file_path
   list_of_files_df = data.frame(file_name = c())
   sheet_list = getSheetNames(files_pathway[1])
@@ -68,7 +77,7 @@ Choose the sheet to open:
 
 ```{r}
 #Only "ZT" sheets are supported for now
-sheet_to_open = "Phase - Mean"
+sheet_to_open = "Other-ZT-Mean"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -103,7 +112,24 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_=   "Mean_Phase_one"
+para_=   "Activity_Mean"
+
+if (is_empty(which(names_col == para_))){
+  print("///// Wrong column name, just copy-paste, please, you know you can't type properly \\\\\\")
+}
+
+if (!is_empty(grep("Temp_Mean", para_)) | !is_empty(grep("Activity_Mean", para_))){
+    APP = c("2504","2505","3160","3161")
+    WT = c("2670","2671","3086","3159")
+} else {
+  if (!is_empty(grep("Green", crit2))){
+      APP = c("2504","3160","3161")
+      WT = c("2671","3086")
+  } else if (!is_empty(grep("Blue", crit2))){
+      APP = c("2504","3160","3161")
+      WT = c("2671","3086")
+  }
+}
 
 ```
 
@@ -169,16 +195,62 @@ Calculate the average and SD, then save as xlsx
   }
 head(combine_df[,(length(combine_df)-5):(length(combine_df))])
 
+
+base_folder_ = paste0("combine_df/",crit[1])
+if (dir.exists(base_folder_)==F){
+  dir.create(base_folder_)
+}
+
+combine_df_exp_name = paste0("combine_df/",crit[1],"/",para_)
+if (dir.exists(combine_df_exp_name)==F){
+  dir.create(combine_df_exp_name)
+}
+
+head(temp_)
+
 testwb = createWorkbook()
 addWorksheet(testwb, para_)
 writeData(testwb,para_, x=combine_df)
-filename = paste0("combine_df/",names(col_to_add),".xlsx")
+filename = paste0(combine_df_exp_name,"/",para_,"_",crit3,".xlsx")
 saveWorkbook(testwb, file = filename, overwrite = T)
+
+comb_unique = unique(list.files(patter = para_, recursive = T, ignore.case = T))
+comb_unique = comb_unique[grep(crit[1],comb_unique)]
+comb_unique = comb_unique[grep("_all",comb_unique,invert=T)]
+comb_unique = comb_unique[grep(".xlsx",comb_unique)]
+
+combine_workbook = createWorkbook()
+ for (a in 1:length(comb_unique)){
+    comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
+    comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
+    comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
+    #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
+    temp_ = read.xlsx(comb_unique[a])
+    assign(comb_unique_temp2,temp_)
+    addWorksheet(combine_workbook, comb_unique_temp2)
+    writeData(combine_workbook, comb_unique_temp2, x= temp_)
+ }
+
+filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
+saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
+
+  
+
+
 ```
 
 Create GraphPlot
 
 ```{r}
+png_exp_name = paste0("png/",crit3)
+if (dir.exists(png_exp_name)==F){
+  dir.create(png_exp_name)
+}
+png_name = paste0(png_exp_name,"/",names(col_to_add),".png")
+png(png_name,         # File name
+    width = 1600, height = 1000,
+    res = 300
+    )
 if (is.numeric(combine_df$x_axis)){
   g = ggplot(combine_df, aes(x=x_axis))+
     geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
@@ -190,18 +262,19 @@ if (is.numeric(combine_df$x_axis)){
     labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
     geom_vline(xintercept = 11.75, linetype = "dotted")+
     scale_x_continuous(limits = c(-1,24), n.breaks=14)+
+    # scale_y_continuous(limits = c(35,38))+
     scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
                      labels = c(APP = "APP", WT = "WT")) +
     #geom_vline(xintercept = c(14,22), linetype ="dashed")+
     #geom_vline(xintercept = c(16,18))+
     #ylim(0,NA)+
     theme_classic()
-      if (crit2 == ".+TRF.+Chronic"){
+      if (crit2 == "TRF.+Chronic"){
       g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")
       } else if (crit2 == ".+TRF.+Light"){
                 g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")+
                 geom_vline(xintercept = c(15.75,17.25))
-      } else if (crit2 == ".+TRF.+Pulse2"){
+      } else if (crit2 == "TRF.+Pulse2"){
                 g = g + geom_vline(xintercept = c(15.75,17.25))
       }
 } else if (is.character(combine_df$x_axis)){
@@ -210,12 +283,12 @@ if (is.numeric(combine_df$x_axis)){
     custom_labels <- c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+")
     
     g = ggplot(combine_df, aes(x=x_axis_continuous))+
-      geom_point(aes(y =APP_mean), size=3, shape = 3)+
       geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
       geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
-      geom_point(aes(y=WT_mean), size = 3, shape = 3)+
+      geom_point(aes(y =APP_mean), size=3, shape = 3)+
       geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
       geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
+      geom_point(aes(y=WT_mean), size = 3, shape = 3)+
       labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
       scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
                      labels = c(APP = "APP", WT = "WT")) +
@@ -228,6 +301,8 @@ if (is.numeric(combine_df$x_axis)){
       # geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
       # theme_classic()
 } else {print("Unrecognized x-axis")}
+g
+ dev.off() 
   print(g)
 ```
 
