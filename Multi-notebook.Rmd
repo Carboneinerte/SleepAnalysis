@@ -1,19 +1,19 @@
 ---
 # Heading1
-
+author: Hugo Calligaro
 title: "Sleep Multi Analysis"
 output: html_notebook
+last update: 2024-01-03
 ---
 
 Requested packages:
 
 ```{r}
- if(!require(openxlsx)){install.packages("openxlsx")}
-  if(!require(ggplot2)){install.packages("ggplot2")}
+if(!require(openxlsx)){install.packages("openxlsx")}
+if(!require(ggplot2)){install.packages("ggplot2")}
 if(!require(tidyr)){install.packages("tidyr")}
 if(!require(tidyverse)){install.packages("tidyverse")}
-
-  if(!require(matrixStats)){install.packages("matrixStats")}
+if(!require(matrixStats)){install.packages("matrixStats")}
 if(!require(rlang)){install.packages("rlang")}
 rm(list = ls())
 ```
@@ -25,24 +25,26 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 ```{r}
 
   APP = c(
-    #"2504",
+    "2504",
     "2505",
     "3160",
     "3161"
     )
   WT = c(
     "2670",
-   #"2671",
+    "2671",
     "3086",
     "3159"
   )
+  
+  
 
 ```
 
 Choose the criteria to open files:
 
 ```{r}
-crit = c("Green","Acute")
+crit = c("Green", "baseline")
 
 ```
 
@@ -77,7 +79,7 @@ Choose the sheet to open:
 
 ```{r}
 #Only "ZT" sheets are supported for now
-sheet_to_open = "Other-ZT-Mean"
+sheet_to_open = "Uninterrupted-sleep-Mean"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -112,13 +114,14 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_=   "Activity_Mean"
+para_=   "Light_phase_min"  
 
 if (is_empty(which(names_col == para_))){
-  print("///// Wrong column name, just copy-paste, please, you know you can't type properly \\\\\\")
+  print("///// Wrong column name, just copy-paste, please")
+        #, you know you can't type properly \\\\\\")
 }
 
-if (!is_empty(grep("Temp_Mean", para_)) | !is_empty(grep("Activity_Mean", para_))){
+if (!is_empty(grep("Temp_Mean", para_)) | !is_empty(grep("Activity_Mean", para_)) | !is_empty(grep("Temperature", para_)) | !is_empty(grep("Activity", para_))){
     APP = c("2504","2505","3160","3161")
     WT = c("2670","2671","3086","3159")
 } else {
@@ -195,7 +198,9 @@ Calculate the average and SD, then save as xlsx
   }
 head(combine_df[,(length(combine_df)-5):(length(combine_df))])
 
-
+if (dir.exists("combine_df/")==F){
+  dir.create("combine_df/")
+}
 base_folder_ = paste0("combine_df/",crit[1])
 if (dir.exists(base_folder_)==F){
   dir.create(base_folder_)
@@ -219,20 +224,20 @@ comb_unique = comb_unique[grep(crit[1],comb_unique)]
 comb_unique = comb_unique[grep("_all",comb_unique,invert=T)]
 comb_unique = comb_unique[grep(".xlsx",comb_unique)]
 
-combine_workbook = createWorkbook()
- for (a in 1:length(comb_unique)){
-    comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
-    comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
-    comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
-    #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
-    temp_ = read.xlsx(comb_unique[a])
-    assign(comb_unique_temp2,temp_)
-    addWorksheet(combine_workbook, comb_unique_temp2)
-    writeData(combine_workbook, comb_unique_temp2, x= temp_)
- }
-
-filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
-saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
+# combine_workbook = createWorkbook()
+#  for (a in 1:length(comb_unique)){
+#     comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
+#     comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
+#     comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
+#     #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
+#     temp_ = read.xlsx(comb_unique[a])
+#     assign(comb_unique_temp2,temp_)
+#     addWorksheet(combine_workbook, comb_unique_temp2)
+#     writeData(combine_workbook, comb_unique_temp2, x= temp_)
+#  }
+# 
+# filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
+# saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
 
   
 
@@ -242,14 +247,18 @@ saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
 Create GraphPlot
 
 ```{r}
+g = c()
 png_exp_name = paste0("png/",crit3)
+if (dir.exists("png/")==F){
+  dir.create("png/")
+}
 if (dir.exists(png_exp_name)==F){
   dir.create(png_exp_name)
 }
-png_name = paste0(png_exp_name,"/",names(col_to_add),".png")
-png(png_name,         # File name
-    width = 1600, height = 1000,
-    res = 300
+png_name = paste0(png_exp_name,"/",names(col_to_add),".svg")
+svg(png_name,         # File name
+    width = 8, height = 5
+    #res = 300
     )
 if (is.numeric(combine_df$x_axis)){
   g = ggplot(combine_df, aes(x=x_axis))+
@@ -278,6 +287,7 @@ if (is.numeric(combine_df$x_axis)){
                 g = g + geom_vline(xintercept = c(15.75,17.25))
       }
 } else if (is.character(combine_df$x_axis)){
+    if (combine_df$x_axis[1] == "0-.5"){
     #combine_df$x_axis = fct_inorder(combine_df$x_axis)
     combine_df$x_axis_continuous = seq(1,nrow(combine_df),by = 1)
     custom_labels <- c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+")
@@ -300,7 +310,8 @@ if (is.numeric(combine_df$x_axis)){
       # geom_col(aes(x= x_axis, y=WT_mean), position="dodge", fill="#FFA500")+
       # geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
       # theme_classic()
-} else {print("Unrecognized x-axis")}
+} else {print("Type of graph not supported yet")}
+    } else {print("Unrecognized x-axis")}
 g
  dev.off() 
   print(g)
