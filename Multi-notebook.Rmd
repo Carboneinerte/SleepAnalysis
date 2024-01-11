@@ -44,7 +44,7 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 Choose the criteria to open files:
 
 ```{r}
-crit = c("Green", "baseline")
+crit = c("Green","Acute")
 
 ```
 
@@ -78,8 +78,7 @@ Importation of the list of files matching the criteria (crit2)
 Choose the sheet to open:
 
 ```{r}
-#Only "ZT" sheets are supported for now
-sheet_to_open = "Uninterrupted-sleep-Mean"
+sheet_to_open = "Phase-Cluster-Mean"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -114,7 +113,7 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_=   "Light_phase_min"  
+para_=   "Cluster_Mean_min" 
 
 if (is_empty(which(names_col == para_))){
   print("///// Wrong column name, just copy-paste, please")
@@ -125,7 +124,10 @@ if (!is_empty(grep("Temp_Mean", para_)) | !is_empty(grep("Activity_Mean", para_)
     APP = c("2504","2505","3160","3161")
     WT = c("2670","2671","3086","3159")
 } else {
-  if (!is_empty(grep("Green", crit2))){
+  if (!is_empty(grep("Exp", crit2))){
+      APP = c("2504","2505","3160","3161")
+      WT = c("2670","2671","3086")
+  } else if (!is_empty(grep("Green", crit2))){
       APP = c("2504","3160","3161")
       WT = c("2671","3086")
   } else if (!is_empty(grep("Blue", crit2))){
@@ -224,23 +226,20 @@ comb_unique = comb_unique[grep(crit[1],comb_unique)]
 comb_unique = comb_unique[grep("_all",comb_unique,invert=T)]
 comb_unique = comb_unique[grep(".xlsx",comb_unique)]
 
-# combine_workbook = createWorkbook()
-#  for (a in 1:length(comb_unique)){
-#     comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
-#     comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
-#     comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
-#     #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
-#     temp_ = read.xlsx(comb_unique[a])
-#     assign(comb_unique_temp2,temp_)
-#     addWorksheet(combine_workbook, comb_unique_temp2)
-#     writeData(combine_workbook, comb_unique_temp2, x= temp_)
-#  }
-# 
-# filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
-# saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
+combine_workbook = createWorkbook()
+ for (a in 1:length(comb_unique)){
+    comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
+    comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
+    comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
+    #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
+    temp_ = read.xlsx(comb_unique[a])
+    assign(comb_unique_temp2,temp_)
+    addWorksheet(combine_workbook, comb_unique_temp2)
+    writeData(combine_workbook, comb_unique_temp2, x= temp_)
+ }
 
-  
-
+filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
+saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
 
 ```
 
@@ -310,7 +309,51 @@ if (is.numeric(combine_df$x_axis)){
       # geom_col(aes(x= x_axis, y=WT_mean), position="dodge", fill="#FFA500")+
       # geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
       # theme_classic()
-} else {print("Type of graph not supported yet")}
+    } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 8){
+    Genotype = c(rep("APP",8), rep("WT",8))
+    Phase = rep(c(rep("Light",4), rep("Dark",4)),2)
+    Stage = rep(c("Wake","NREM","REM","Total Sleep"),4)
+    Var_ = c(combine_df$APP_mean,combine_df$WT_mean)
+    SEM_ = c(combine_df$APP_SEM,combine_df$WT_SEM)
+    data2 = data.frame(Genotype, Phase, Stage, Var_, SEM_)
+    data2$Phase <- factor(data2$Phase, levels = c("Light", "Dark"))
+    data2$Genotype <- factor(data2$Genotype, levels = c("WT", "APP"))
+    data2$Stage = factor(data2$Stage, levels = c("Wake","NREM","REM","Total Sleep"))
+    
+    
+    g = ggplot(data2, aes(x = Stage, y = Var_, fill = Genotype)) +
+      geom_bar(position = "dodge", stat = "identity") +
+      geom_errorbar(aes(ymin = Var_ - SEM_, ymax = Var_ + SEM_), stat = "identity",
+                    position = position_dodge(width = 0.9), colour = "black", width = 0.2) +
+      geom_hline(yintercept = 0) +
+      labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
+      theme_classic() +
+      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500")) +  # Adjust colors as needed
+      facet_wrap(~Phase, scales = "fixed", nrow = 1)
+    
+    } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 12){
+    data2=c()
+    Genotype = c(rep("APP",12), rep("WT",12))
+    Phase = rep(c(rep("Light",6), rep("Dark",6)),2)
+    Cluster = rep(c("Cluster1","Cluster2","Cluster3","Cluster4","Cluster5","Cluster6"),4)
+    Var_ = c(combine_df$APP_mean,combine_df$WT_mean)
+    SEM_ = c(combine_df$APP_SEM,combine_df$WT_SEM)
+    data2 = data.frame(Genotype, Phase, Cluster, Var_, SEM_)
+    data2$Phase <- factor(data2$Phase, levels = c("Light", "Dark"))
+    data2$Genotype <- factor(data2$Genotype, levels = c("WT", "APP"))
+    data2$Cluster = factor(data2$Cluster, levels = c("Cluster1","Cluster2","Cluster3","Cluster4","Cluster5","Cluster6"))
+    
+      g = ggplot(data2, aes(x = Cluster, y = Var_, fill = Genotype)) +
+      geom_bar(position = "dodge", stat = "identity") +
+      geom_errorbar(aes(ymin = Var_ - SEM_, ymax = Var_ + SEM_), stat = "identity",
+                    position = position_dodge(width = 0.9), colour = "black", width = 0.2) +
+      geom_hline(yintercept = 0) +
+      labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
+      theme_classic() +
+      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500")) +  # Adjust colors as needed
+      facet_wrap(~Phase, scales = "fixed", nrow = 1)
+    
+    } else {print("Type of graph not supported yet")}
     } else {print("Unrecognized x-axis")}
 g
  dev.off() 

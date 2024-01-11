@@ -140,24 +140,24 @@ for (t in date){
   df$Uncategorized_percent = (max_epoch_per_ZT-df$Sum)/max_epoch_per_ZT*100
   
   
-  ### Create dataframe for summary of state per phase
-  Phase = c(rep("Light",3),rep("Dark",3))
-  Stage_sleep = rep(c("Wake","NREM","REM"),2)
-  Sum_Phase = c(sum(df[1:6,3]),sum(df[1:6,4]),sum(df[1:6,5]),sum(df[7:12,3]),
-                sum(df[7:12,4]),sum(df[7:12,5]))
-  df_sum = data.frame(Phase, Stage_sleep,Sum_Phase)
-  
-  Mean_Phase = c(mean(df[1:6,3]),mean(df[1:6,4]),mean(df[1:6,5]),mean(df[7:12,3]),
-                 mean(df[7:12,4]),mean(df[7:12,5]))
-  df_mean = data.frame(Phase, Stage_sleep, Mean_Phase)
+  # ### Create dataframe for summary of state per phase
+  # Phase = c(rep("Light",3),rep("Dark",3))
+  # Stage_sleep = rep(c("Wake","NREM","REM"),2)
+  # Sum_Phase = c(sum(df[1:6,3]),sum(df[1:6,4]),sum(df[1:6,5]),sum(df[7:12,3]),
+  #               sum(df[7:12,4]),sum(df[7:12,5]))
+  # df_sum = data.frame(Phase, Stage_sleep,Sum_Phase)
+  # 
+  # Mean_Phase = c(mean(df[1:6,3]),mean(df[1:6,4]),mean(df[1:6,5]),mean(df[7:12,3]),
+  #                mean(df[7:12,4]),mean(df[7:12,5]))
+  # df_mean = data.frame(Phase, Stage_sleep, Mean_Phase)
 
   ### add data to workbook
   addWorksheet(wb, t)
   writeData(wb, sheet= t, x = df)
   
-  alt_title = paste0(t,"-summary")
-  addWorksheet(wb, alt_title)
-  writeData(wb, sheet = alt_title, x=df_sum)
+  # alt_title = paste0(t,"-summary")
+  # addWorksheet(wb, alt_title)
+  # writeData(wb, sheet = alt_title, x=df_sum)
 
 }
 # print(paste0("3-",date()))
@@ -174,34 +174,6 @@ df_one = df_one[df_one$Sum > 250,]
 addWorksheet(wb2, "State-All-days")
 writeData(wb2,"State-All-days", x=df_one)
 
-### Summary of state per phase
-Phase = c(rep("Light",3),rep("Dark",3))
-Stage_sleep = rep(c("Wake","NREM","REM"),2)
-
-Mean_Phase_one = c(mean(df_one$Wake[df_one$ZT < 12]),mean(df_one$NREM[df_one$ZT < 12]),mean(df_one$REM[df_one$ZT < 12]),
-                   mean(df_one$Wake[df_one$ZT >= 12]),mean(df_one$NREM[df_one$ZT >= 12]),mean(df_one$REM[df_one$ZT >= 12]))
-
-# SD_Phase_one = c(sd(df_one$Wake[df_one$ZT < 12]),
-#                   sd(df_one$Sleep[df_one$ZT < 12]),
-#                   sd(df_one$Paradoxical[df_one$ZT < 12]),
-#                   sd(df_one$Wake[df_one$ZT >= 12]),
-#                   sd(df_one$Sleep[df_one$ZT >= 12]),
-#                   sd(df_one$Paradoxical[df_one$ZT >= 12])
-#                   )
-n_phase_one = c(length(df_one$Wake[df_one$ZT < 12]),
-                length(df_one$NREM[df_one$ZT < 12]),
-                length(df_one$REM[df_one$ZT < 12]),
-                length(df_one$Wake[df_one$ZT >= 12]),
-                length(df_one$NREM[df_one$ZT >= 12]),
-                length(df_one$REM[df_one$ZT >= 12])
-)
-
-df_mean_one = data.frame(Phase, Stage_sleep, Mean_Phase_one,
-                         # SD_Phase_one,
-                         n_phase_one)
-
-addWorksheet(wb2, "Phase - Mean")
-writeData(wb2, sheet="Phase - Mean", x= df_mean_one)
 
 date_phase= c(date,date)
 date_phase = sort(date_phase)
@@ -209,11 +181,10 @@ Phase_day = rep(c("Light","Dark"),length(date_phase)/2)
 df3 = data.frame(date_phase, Phase_day, row.names = NULL)
 df3_gne = data.frame()
 temp_df3 = c()
-
 for (t in date){
-  Mean_Light_day = c(mean(df_one$Wake[df_one$ZT<12 & df_one$Date ==t]),
-                     mean(df_one$NREM[df_one$ZT<12 & df_one$Date ==t]),
-                     mean(df_one$REM[df_one$ZT<12 & df_one$Date ==t]),
+  Mean_Light_day = c(sum(df_one$Wake[df_one$ZT<12 & df_one$Date ==t]),
+                     sum(df_one$NREM[df_one$ZT<12 & df_one$Date ==t]),
+                     sum(df_one$REM[df_one$ZT<12 & df_one$Date ==t]),
                      # sd(df_one$Wake[df_one$ZT<12 & df_one$Date ==t]),
                      # sd(df_one$Sleep[df_one$ZT<12 & df_one$Date ==t]),
                      # sd(df_one$Paradoxical[df_one$ZT<12 & df_one$Date ==t]),
@@ -221,9 +192,9 @@ for (t in date){
                      length(df_one$NREM[df_one$ZT<12 & df_one$Date ==t]),
                      length(df_one$REM[df_one$ZT<12 & df_one$Date ==t]))
   
-  Mean_Dark_day = c(mean(df_one$Wake[df_one$ZT>=12 & df_one$Date ==t]),
-                    mean(df_one$NREM[df_one$ZT>=12 & df_one$Date ==t]),
-                    mean(df_one$REM[df_one$ZT>=12 & df_one$Date ==t]),
+  Mean_Dark_day = c(sum(df_one$Wake[df_one$ZT>=12 & df_one$Date ==t]),
+                    sum(df_one$NREM[df_one$ZT>=12 & df_one$Date ==t]),
+                    sum(df_one$REM[df_one$ZT>=12 & df_one$Date ==t]),
                     # sd(df_one$Wake[df_one$ZT>=12&df_one$Date ==t]),
                     # sd(df_one$Sleep[df_one$ZT>=12&df_one$Date ==t]),
                     # sd(df_one$Paradoxical[df_one$ZT>=12&df_one$Date ==t]),
@@ -278,6 +249,36 @@ df_ZT_Mean = cbind(df_ZT_Mean,mean_table)
 df_ZT_Mean = arrange(df_ZT_Mean, ZT)
 addWorksheet(wb2, "ZT-Mean")
 writeData(wb2,"ZT-Mean", x=df_ZT_Mean)
+
+### Summary of state per phase
+Phase = c(rep("Light",4),rep("Dark",4))
+Stage_sleep = rep(c("Wake","NREM","REM","Sleep"),2)
+
+Mean_Phase_one = c(sum(df_ZT_Mean$Wake[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$NREM[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$REM[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Total_Sleep[df_ZT_Mean$ZT < 12]),
+                   sum(df_ZT_Mean$Wake[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$NREM[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$REM[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Total_Sleep[df_ZT_Mean$ZT >= 12]))
+
+df_mean_one = data.frame(Phase, Stage_sleep, Mean_Phase_one)
+names(df_mean_one) = c("Phase","Stage","Mean_ep")
+df_mean_one$Mean_min = df_mean_one$Mean_ep * (1/6)
+df_mean_one$Mean_h = df_mean_one$Mean_min / 60
+
+addWorksheet(wb2, "Phase - Mean")
+writeData(wb2, sheet="Phase - Mean", x= df_mean_one)
+
+### Summary of cluster per phase
+Phase_cluster = c(rep("Light",6),rep("Dark",6))
+Cluster_ = rep(c("Cluster1","Cluster2","Cluster3","Cluster4","Cluster5","Cluster6"),2)
+
+Mean_cluster = c(sum(df_ZT_Mean$Cluster1[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Cluster2[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Cluster3[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Cluster4[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Cluster5[df_ZT_Mean$ZT < 12]),sum(df_ZT_Mean$Cluster6[df_ZT_Mean$ZT < 12]),
+                 sum(df_ZT_Mean$Cluster1[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Cluster2[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Cluster3[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Cluster4[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Cluster5[df_ZT_Mean$ZT >= 12]),sum(df_ZT_Mean$Cluster6[df_ZT_Mean$ZT >= 12]))
+
+df_cluster_mean = data.frame(Phase_cluster, Cluster, Mean_cluster)
+names(df_cluster_mean) = c("Phase","Cluster","Cluster_Mean_ep")
+df_cluster_mean$Cluster_Mean_min = df_cluster_mean$Cluster_Mean_ep * (1/6)
+df_cluster_mean$Cluster_Mean_h = df_cluster_mean$Cluster_Mean_min / 60
+
+addWorksheet(wb2, "Phase-Cluster-Mean")
+writeData(wb2, sheet="Phase-Cluster-Mean", x= df_cluster_mean)
 
 # print(paste0("4-",date()))
 #### Bouts of sleep states #####
@@ -641,6 +642,17 @@ if (!is_empty(RawData$Activity)){
   addWorksheet(wb2, "Other-ZT-Mean")
   writeData(wb2,"Other-ZT-Mean", x=Loop_ZT_Mean)
   
+  ### Per Phase
+  Phase_acti = c("Light","Dark")
+  Acti = c(sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT < 12]),sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT >= 12]))
+  Temp = c(mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT < 12]),mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT >= 12]))
+  
+  Phase_acti_df = data.frame(Phase_acti,Acti,Temp)
+  names(Phase_acti_df)= c("Phase","Activity","Temperature")
+  
+  addWorksheet(wb2, "Phase - Activity")
+  writeData(wb2, "Phase - Activity", x= Phase_acti_df)
+
   
   # print(paste0("9-",date()))
 #### Output file #####
@@ -886,3 +898,4 @@ Multi_analysis = function(crit="xlsx", para_ = "Wake"){
 #   geom_smooth(aes(y=WT_mean), method="auto",color="#FFA500")+
 #   labs(y=names(col_to_add))+
 #   theme_classic()
+
