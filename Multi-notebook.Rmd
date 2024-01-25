@@ -44,7 +44,7 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 Choose the criteria to open files:
 
 ```{r}
-crit = c("Green","Acute")
+crit = c("TRF","Light")
 
 ```
 
@@ -78,7 +78,7 @@ Importation of the list of files matching the criteria (crit2)
 Choose the sheet to open:
 
 ```{r}
-sheet_to_open = "Phase-Cluster-Mean"
+sheet_to_open = "Other-ZT-Mean"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -113,7 +113,7 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_=   "Cluster_Mean_min" 
+para_= "Activity_Mean"  
 
 if (is_empty(which(names_col == para_))){
   print("///// Wrong column name, just copy-paste, please")
@@ -246,7 +246,6 @@ saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
 Create GraphPlot
 
 ```{r}
-g = c()
 png_exp_name = paste0("png/",crit3)
 if (dir.exists("png/")==F){
   dir.create("png/")
@@ -255,10 +254,11 @@ if (dir.exists(png_exp_name)==F){
   dir.create(png_exp_name)
 }
 png_name = paste0(png_exp_name,"/",names(col_to_add),".svg")
-svg(png_name,         # File name
+svg(filename = png_name,         # File name
     width = 8, height = 5
     #res = 300
     )
+g = c()
 if (is.numeric(combine_df$x_axis)){
   g = ggplot(combine_df, aes(x=x_axis))+
     geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
@@ -268,7 +268,7 @@ if (is.numeric(combine_df$x_axis)){
     geom_point(aes(y=WT_mean), size = 2, shape = 3)+
     geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
     labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
-    geom_vline(xintercept = 11.75, linetype = "dotted")+
+    geom_vline(xintercept = 12, linetype = "dotted")+
     scale_x_continuous(limits = c(-1,24), n.breaks=14)+
     # scale_y_continuous(limits = c(35,38))+
     scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
@@ -278,12 +278,12 @@ if (is.numeric(combine_df$x_axis)){
     #ylim(0,NA)+
     theme_classic()
       if (crit2 == "TRF.+Chronic"){
-      g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")
-      } else if (crit2 == ".+TRF.+Light"){
-                g = g + geom_vline(xintercept = c(13.75,21.25), linetype ="dashed")+
-                geom_vline(xintercept = c(15.75,17.25))
+      g = g + geom_vline(xintercept = c(14,22), linetype ="dashed")
+      } else if (crit2 == "TRF.+Light"){
+                g = g + geom_vline(xintercept = c(14,22), linetype ="dashed")+
+                geom_vline(xintercept = c(16,18))
       } else if (crit2 == "TRF.+Pulse2"){
-                g = g + geom_vline(xintercept = c(15.75,17.25))
+                g = g + geom_vline(xintercept = c(16,18))
       }
 } else if (is.character(combine_df$x_axis)){
     if (combine_df$x_axis[1] == "0-.5"){
@@ -353,11 +353,33 @@ if (is.numeric(combine_df$x_axis)){
       scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500")) +  # Adjust colors as needed
       facet_wrap(~Phase, scales = "fixed", nrow = 1)
     
+    } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 2){
+          data2=c()
+    Genotype = c(rep("APP",2), rep("WT",2))
+    Phase = rep(c("Light","Dark"),2)
+    #Cluster = rep(c("Cluster1","Cluster2","Cluster3","Cluster4","Cluster5","Cluster6"),4)
+    Var_ = c(combine_df$APP_mean,combine_df$WT_mean)
+    SEM_ = c(combine_df$APP_SEM,combine_df$WT_SEM)
+    data2 = data.frame(Genotype, Phase, Var_, SEM_)
+    data2$Phase <- factor(data2$Phase, levels = c("Light", "Dark"))
+    data2$Genotype <- factor(data2$Genotype, levels = c("WT", "APP"))
+    #data2$Cluster = factor(data2$Cluster, levels = c("Cluster1","Cluster2","Cluster3","Cluster4","Cluster5","Cluster6"))
+    
+      g = ggplot(data2, aes(x = Phase, y = Var_, fill = Genotype)) +
+      geom_bar(position = "dodge", stat = "identity") +
+      geom_errorbar(aes(ymin = Var_ - SEM_, ymax = Var_ + SEM_), stat = "identity",
+                    position = position_dodge(width = 0.9), colour = "black", width = 0.2) +
+      geom_hline(yintercept = 0) +
+      labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
+      theme_classic() +
+      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500"))  # Adjust colors as needed
+      
     } else {print("Type of graph not supported yet")}
-    } else {print("Unrecognized x-axis")}
+} else {print("Unrecognized x-axis")}
 g
- dev.off() 
-  print(g)
+dev.off() 
+
+print(g)
 ```
 
 Combine APP and WT as same column for stat analysis
