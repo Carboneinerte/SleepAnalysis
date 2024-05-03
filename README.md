@@ -17,3 +17,7 @@ The final folder should contain the mouse ID for the correct output file naming.
 The default argument is "csv" which will process ALL csv files in the input folder
 
 Output file will be saved in a folder called output.
+
+* Multi-notebook.rmd is a notebook to compare the output from different animal/experiment.
+
+* Script for temperature analysis is still under development.
