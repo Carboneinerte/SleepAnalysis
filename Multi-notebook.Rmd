@@ -9,12 +9,12 @@ last update: 2024-01-03
 Requested packages:
 
 ```{r}
-if(!require(openxlsx)){install.packages("openxlsx")}
-if(!require(ggplot2)){install.packages("ggplot2")}
-if(!require(tidyr)){install.packages("tidyr")}
-if(!require(tidyverse)){install.packages("tidyverse")}
-if(!require(matrixStats)){install.packages("matrixStats")}
-if(!require(rlang)){install.packages("rlang")}
+if(!require(openxlsx, quietly = TRUE)){install.packages("openxlsx")}
+if(!require(ggplot2, quietly = TRUE)){install.packages("ggplot2")}
+if(!require(tidyr, quietly = TRUE)){install.packages("tidyr")}
+if(!require(tidyverse, quietly = TRUE)){install.packages("tidyverse")}
+if(!require(matrixStats, quietly = TRUE)){install.packages("matrixStats")}
+if(!require(rlang, quietly = TRUE)){install.packages("rlang")}
 rm(list = ls())
 ```
 
@@ -44,7 +44,7 @@ Determine which animals need to be analysed for APP and WT (just comment those t
 Choose the criteria to open files:
 
 ```{r}
-crit = c("TRF","Light")
+crit = c("TRF","Chronic")
 
 ```
 
@@ -78,7 +78,7 @@ Importation of the list of files matching the criteria (crit2)
 Choose the sheet to open:
 
 ```{r}
-sheet_to_open = "Other-ZT-Mean"
+sheet_to_open = "Other-ZT-Mean" 
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -113,7 +113,7 @@ print(names_col)
 Choose the column to combine:
 
 ```{r}
-para_= "Activity_Mean"  
+para_= "Temp_Mean"  
 
 if (is_empty(which(names_col == para_))){
   print("///// Wrong column name, just copy-paste, please")
@@ -231,7 +231,7 @@ combine_workbook = createWorkbook()
     comb_unique_temp = unlist(data.table::tstrsplit(comb_unique[a],"/", fill=NA, type.convert=FALSE, names=F))
     comb_unique_temp2 = comb_unique_temp[length(comb_unique_temp)]
     comb_unique_temp2 = gsub(".xlsx","", comb_unique_temp2)
-    #list_of_files_df = rbind(list_of_files_df, list_of_files_data)
+    list_of_files_df = rbind(list_of_files_df, list_of_files_data)
     temp_ = read.xlsx(comb_unique[a])
     assign(comb_unique_temp2,temp_)
     addWorksheet(combine_workbook, comb_unique_temp2)
@@ -271,8 +271,8 @@ if (is.numeric(combine_df$x_axis)){
     geom_vline(xintercept = 12, linetype = "dotted")+
     scale_x_continuous(limits = c(-1,24), n.breaks=14)+
     # scale_y_continuous(limits = c(35,38))+
-    scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
-                     labels = c(APP = "APP", WT = "WT")) +
+    scale_color_manual(values = c(WT = "#0040FF", APP = "#FFA500"), 
+                     labels = c( WT = "WT",APP = "APP")) +
     #geom_vline(xintercept = c(14,22), linetype ="dashed")+
     #geom_vline(xintercept = c(16,18))+
     #ylim(0,NA)+
