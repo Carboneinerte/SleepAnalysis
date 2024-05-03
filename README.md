@@ -21,3 +21,5 @@ Output file will be saved in a folder called output.
 * Multi-notebook.rmd is a notebook to compare the output from different animal/experiment.
 
 * Script for temperature analysis is still under development.
+
+* Multi_comparison.R is an obsolete version of multi-notebook.rmd
