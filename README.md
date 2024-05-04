@@ -20,7 +20,7 @@ The data should be sorted by experiment and by animal within a single folder.
 
 For example, to analyze only the recording from mouse 2670 during the TRF paradigm:
 
-`Sleep_select(c("TRF", "2670")`
+`Sleep_select(c("TRF", "2670"))`
 
 The root folder for input data needs to be "input". Example of data organization: "Sleep\input\2023-06-19_Green_chronic\2505"
 The final folder should contain the mouse ID for the correct output file naming.
