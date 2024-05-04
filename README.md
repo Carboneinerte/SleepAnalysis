@@ -15,7 +15,7 @@ Then call the function as follows:
 
 Argument (criteria) can be a number (ex: 2670), a string of text (ex: "Green"), or a combination of both (ex: c(2670, "green") ).
 The arguments will be used to look for a file matching and the script will work on ALL files within the same folder.
-The data should be sorted by animal and by experiment within a single folder.
+The data should be sorted by experiment and by animal within a single folder.
 *Only one recording session per folder*. Example: "Documents\R\Sleep\input\2023-09-09_TRF_baseline\2670"
 
 For example, to analyze only the recording from mouse 2670 during the TRF paradigm:
