@@ -15,6 +15,7 @@ if(!require(tidyr, quietly = TRUE)){install.packages("tidyr")}
 if(!require(tidyverse, quietly = TRUE)){install.packages("tidyverse")}
 if(!require(matrixStats, quietly = TRUE)){install.packages("matrixStats")}
 if(!require(rlang, quietly = TRUE)){install.packages("rlang")}
+if(!require(emmeans, quietly = TRUE)){install.packages("emmeans")}
 rm(list = ls())
 ```
 
@@ -36,15 +37,13 @@ Determine which animals need to be analysed for APP and WT (just comment those t
     "3086",
     "3159"
   )
-  
-  
 
 ```
 
 Choose the criteria to open files:
 
 ```{r}
-crit = c("TRF","Chronic")
+crit = c("Exp")
 
 ```
 
@@ -78,7 +77,7 @@ Importation of the list of files matching the criteria (crit2)
 Choose the sheet to open:
 
 ```{r}
-sheet_to_open = "Other-ZT-Mean" 
+sheet_to_open =   "Pre_wake"
 ```
 
 Open all xlsx files and open the corresponding sheet as data.frame
@@ -102,18 +101,20 @@ list_of_files_df = data.frame()
   names(list_of_files_df)= "file_name"
   
 head(temp_)
+
 ```
 
 List of column in selected sheet:
 
 ```{r}
+
 print(names_col)
 ```
 
 Choose the column to combine:
 
 ```{r}
-para_= "Temp_Mean"  
+para_= "total_sleep_measured"
 
 if (is_empty(which(names_col == para_))){
   print("///// Wrong column name, just copy-paste, please")
@@ -176,7 +177,7 @@ Calculate the average and SD, then save as xlsx
     }
     combine_df$APP_mean = rowMeans(combine_df[, grep(APP_comb, names(combine_df))])
     combine_df$APP_SD = rowSds(as.matrix(combine_df[, grep(APP_comb, names(combine_df))]))
-    combine_df$APP_SEM = (combine_df$APP_SD / length(APP))
+    combine_df$APP_SEM = (combine_df$APP_SD / sqrt(length(APP)))
   } else {
     APP_comb = APP
     combine_df$APP_mean = combine_df[, grep(APP_comb, names(combine_df))]
@@ -191,7 +192,7 @@ Calculate the average and SD, then save as xlsx
     }
     combine_df$WT_mean = rowMeans(combine_df[, grep(WT_comb, names(combine_df))])
     combine_df$WT_SD = rowSds(as.matrix(combine_df[, grep(WT_comb, names(combine_df))]))
-    combine_df$WT_SEM = (combine_df$WT_SD / length(WT))
+    combine_df$WT_SEM = (combine_df$WT_SD / sqrt(length(WT)))
   } else {
     WT_comb = WT
     combine_df$WT_mean = combine_df[, grep(WT_comb, names(combine_df))]
@@ -237,9 +238,9 @@ combine_workbook = createWorkbook()
     addWorksheet(combine_workbook, comb_unique_temp2)
     writeData(combine_workbook, comb_unique_temp2, x= temp_)
  }
-
-filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
-saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
+# 
+# filename_combine_wb = paste0(combine_df_exp_name,"/",para_,"_all.xlsx")
+# saveWorkbook(combine_workbook, file = filename_combine_wb, overwrite = T)
 
 ```
 
@@ -261,21 +262,22 @@ svg(filename = png_name,         # File name
 g = c()
 if (is.numeric(combine_df$x_axis)){
   g = ggplot(combine_df, aes(x=x_axis))+
+
+    geom_errorbar(aes(ymin = APP_mean, ymax = APP_mean+APP_SEM), width = 0.25)+
+    geom_errorbar(aes(ymin = WT_mean-APP_SEM, ymax = WT_mean), width = 0.25)+
     geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
-    geom_point(aes(y =APP_mean), size=2, shape = 3)+
-    geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
     geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
-    geom_point(aes(y=WT_mean), size = 2, shape = 3)+
-    geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
+    geom_point(aes(y =APP_mean, color="APP"), size=2)+
+    geom_point(aes(y=WT_mean, color="WT"), size = 2)+
     labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
     geom_vline(xintercept = 12, linetype = "dotted")+
     scale_x_continuous(limits = c(-1,24), n.breaks=14)+
     # scale_y_continuous(limits = c(35,38))+
-    scale_color_manual(values = c(WT = "#0040FF", APP = "#FFA500"), 
+    scale_color_manual(values = c(APP = "#D55E00", WT = "#009E73"), 
                      labels = c( WT = "WT",APP = "APP")) +
     #geom_vline(xintercept = c(14,22), linetype ="dashed")+
     #geom_vline(xintercept = c(16,18))+
-    #ylim(0,NA)+
+    ylim(0,NA)+
     theme_classic()
       if (crit2 == "TRF.+Chronic"){
       g = g + geom_vline(xintercept = c(14,22), linetype ="dashed")
@@ -288,27 +290,38 @@ if (is.numeric(combine_df$x_axis)){
 } else if (is.character(combine_df$x_axis)){
     if (combine_df$x_axis[1] == "0-.5"){
     #combine_df$x_axis = fct_inorder(combine_df$x_axis)
+    ### Create data2 here
+    combine_df = combine_df[1:6,]
+    Genotype = c(rep("APP",6), rep("WT",6))
+    comp_ = rep(c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16"),2)
+    Var_ = c(combine_df$APP_mean,combine_df$WT_mean)
+    SEM_ = c(combine_df$APP_SEM,combine_df$WT_SEM)
+    data2 = data.frame(Genotype, comp_, Var_, SEM_)
+    data2$Genotype <- factor(data2$Genotype, levels = c("WT", "APP"))
+    data2$comp_ = factor(data2$comp_, levels = c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16"))
     combine_df$x_axis_continuous = seq(1,nrow(combine_df),by = 1)
-    custom_labels <- c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+")
+    custom_labels <- c("0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16")
     
-    g = ggplot(combine_df, aes(x=x_axis_continuous))+
-      geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
-      geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
-      geom_point(aes(y =APP_mean), size=3, shape = 3)+
-      geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
-      geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
-      geom_point(aes(y=WT_mean), size = 3, shape = 3)+
-      labs(y=names(col_to_add), title = crit2, colour = "Genotype")+
-      scale_color_manual(values = c(APP = "#0040FF", WT = "#FFA500"), 
-                     labels = c(APP = "APP", WT = "WT")) +
-      scale_x_continuous(n.breaks = 8, labels = c("0", "0-.5", "0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32+"))+
+    g = ggplot(data2, aes(x=comp_, y=Var_, fill = Genotype))+
+      geom_bar(position = "dodge", stat = "identity") +
+      geom_errorbar(aes(ymin = Var_ - SEM_, ymax = Var_ + SEM_), stat = "identity",
+                    position = position_dodge(width = 0.9), colour = "black", width = 0.2) +
+      geom_hline(yintercept = 0) +
+      labs(y=names(col_to_add), x ="Length of uninturrepted bouts of sleep (min)", title = crit2, colour = "Genotype")+
+      scale_fill_manual(values = c(APP = "#D55E00", WT = "#009E73"))+
       theme_classic()
       
-      # geom_col(aes(x= x_axis, y=APP_mean), position="dodge", fill = "#0040FF")+
-      # geom_errorbar(aes(ymin = APP_mean-APP_SD, ymax = APP_mean+APP_SD), width = 0.25)+
-      # geom_col(aes(x= x_axis, y=WT_mean), position="dodge", fill="#FFA500")+
-      # geom_errorbar(aes(ymin = WT_mean-WT_SD, ymax = WT_mean+WT_SD), width = 0.25)+
-      # theme_classic()
+      
+      
+      # geom_line(aes(y = APP_mean, color="APP"),linewidth = 1)+
+      # geom_errorbar(aes(ymin = APP_mean-APP_SEM, ymax = APP_mean+APP_SEM), width = 0.25)+
+      # geom_point(aes(y =APP_mean), size=3, shape = 3)+
+      # geom_line(aes(y=WT_mean, color="WT"),linewidth = 1)+
+      # geom_errorbar(aes(ymin = WT_mean-WT_SEM, ymax = WT_mean+WT_SEM), width = 0.25)+
+      # geom_point(aes(y=WT_mean), size = 3, shape = 3)+
+      
+      
+      
     } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 8){
     Genotype = c(rep("APP",8), rep("WT",8))
     Phase = rep(c(rep("Light",4), rep("Dark",4)),2)
@@ -328,7 +341,7 @@ if (is.numeric(combine_df$x_axis)){
       geom_hline(yintercept = 0) +
       labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
       theme_classic() +
-      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500")) +  # Adjust colors as needed
+      scale_fill_manual(values = c(APP = "#D55E00", WT = "#009E73")) +  # Adjust colors as needed
       facet_wrap(~Phase, scales = "fixed", nrow = 1)
     
     } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 12){
@@ -350,7 +363,7 @@ if (is.numeric(combine_df$x_axis)){
       geom_hline(yintercept = 0) +
       labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
       theme_classic() +
-      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500")) +  # Adjust colors as needed
+      scale_fill_manual(values = c(APP = "#D55E00", WT = "#009E73")) +  # Adjust colors as needed
       facet_wrap(~Phase, scales = "fixed", nrow = 1)
     
     } else if (combine_df$x_axis[1] == "Light" & length(combine_df$x_axis) == 2){
@@ -372,14 +385,14 @@ if (is.numeric(combine_df$x_axis)){
       geom_hline(yintercept = 0) +
       labs(x=NULL, y=names(col_to_add), title = crit2, colour = "Genotype")+
       theme_classic() +
-      scale_fill_manual(values = c(APP = "#0040FF", WT = "#FFA500"))  # Adjust colors as needed
+      scale_fill_manual(values = c(APP = "#D55E00", WT = "#009E73"))  # Adjust colors as needed
       
     } else {print("Type of graph not supported yet")}
 } else {print("Unrecognized x-axis")}
 g
 dev.off() 
 
-print(g)
+g
 ```
 
 Combine APP and WT as same column for stat analysis
@@ -391,7 +404,7 @@ combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
   ALLAPP=c()
   for (a in 1:length(combine_APP)){
     ALLAPP = c(ALLAPP,combine_APP[,a])
-  } 
+  }
   all_APP_df = data.frame(ZT=as.factor(rep(ZT2, length(combine_APP))),Geno=rep("APP", length(combine_APP)*nrow(combine_APP)), Param = ALLAPP)
   
   combine_WT = combine_df[, grep(WT_comb, names(combine_df))]
@@ -406,15 +419,97 @@ combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
     ALLWT = combine_WT
     all_WT_df = data.frame(ZT = ZT2, Geno = rep("WT",length(ZT2)), Param =ALLWT)
   }
+} else if (is.numeric(combine_df$x_axis_continuous)){
+  x_axis = combine_df$x_axis_continuous
+  
+  combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
+  ALLAPP=c()
+  for (a in 1:length(combine_APP)){
+    ALLAPP = c(ALLAPP,combine_APP[,a])
+  }
+  all_APP_df = data.frame(comp_=as.factor(rep(x_axis, length(combine_APP))),Geno=rep("APP", length(combine_APP)*nrow(combine_APP)),
+                          Param = ALLAPP)
+  
+  combine_WT = combine_df[, grep(WT_comb, names(combine_df))]
+  ALLWT=c()
+  for (a in 1:length(combine_WT)){
+      ALLWT = c(ALLWT,combine_WT[,a])
+    }
+    all_WT_df = data.frame(comp_=as.factor(rep(x_axis, length(combine_WT))),Geno=rep("WT", length(combine_WT)*nrow(combine_WT)), Param = ALLWT)
+  
+  
+} else if (!is.numeric(combine_df$x_axis) & length(combine_df$x_axis) == 8){
+  x_axis = combine_df$x_axis
+  
+  combine_APP = combine_df[, grep(APP_comb, names(combine_df))]
+  ALLAPP=c()
+  for (a in 1:length(combine_APP)){
+    ALLAPP = c(ALLAPP,combine_APP[,a])
+  }
+  all_APP_df = data.frame(comp_=as.factor(rep(x_axis, length(combine_APP))),Geno=rep("APP", length(combine_APP)*nrow(combine_APP)),
+                          Param = ALLAPP)
+  
+  combine_WT = combine_df[, grep(WT_comb, names(combine_df))]
+  ALLWT=c()
+  for (a in 1:length(combine_WT)){
+      ALLWT = c(ALLWT,combine_WT[,a])
+    }
+    all_WT_df = data.frame(comp_=as.factor(rep(x_axis, length(combine_WT))),Geno=rep("WT", length(combine_WT)*nrow(combine_WT)), Param = ALLWT)
+  
+  All_APP_WT = rbind(all_APP_df,all_WT_df)
+  nb_sample = nrow(All_APP_WT)/4
+  stage_sleep = rep(c("Wake","NREM","REM","Total Sleep"), nb_sample)
+  All_APP_WT = cbind(All_APP_WT, stage_sleep)
+  
+  All_APP_WT_Light = subset(All_APP_WT, comp_ == "Light")
+  All_APP_WT_Dark = subset(All_APP_WT, comp_ == "Dark") 
+
 } else {print("Not implemented yet")}
 ```
 
 Two way analysis
 
 ```{r}
- if (is.numeric(combine_df$x_axis)){
+print(paste0(crit2," ",colnames(col_to_add)))
+ if (combine_df$x_axis[1]==0){
   All_APP_WT = rbind(all_APP_df,all_WT_df)
-  res.aov2 = aov(Param~ZT+Geno, data=All_APP_WT)
+  res.aov2 = aov(Param~ZT*Geno, data=All_APP_WT)
   summary(res.aov2)
+ } else if (!is.numeric(combine_df$x_axis) & length(combine_df$x_axis) == 8){
+  print("Light phase:")
+   res.aov_light = aov(Param~stage_sleep*Geno, data=All_APP_WT_Light)
+  print(summary(res.aov_light))
+  print(" ")
+  print("Dark phase:")
+   res.aov_dark = aov(Param~stage_sleep*Geno, data=All_APP_WT_Dark)
+  print(summary(res.aov_dark))
+ } else if (is.numeric(combine_df$x_axis_continuous) & combine_df$x_axis_continuous[1]==1){ ### find better way to discriminate it
+  All_APP_WT = rbind(all_APP_df,all_WT_df)
+  res.aov2 = aov(Param~comp_*Geno, data=All_APP_WT)
+  summary(res.aov2)
+   
+   } else {print("Not implemented yet")}
+```
+
+```{r}
+print(paste0(crit2," ",colnames(col_to_add)))
+ if (is.numeric(combine_df$x_axis)){
+  emmeans_results <- emmeans(res.aov2, ~ Geno | ZT)
+  pairwise_results <- contrast(emmeans_results, method = "pairwise")
+  summary(pairwise_results)
+ } else if (!is.numeric(combine_df$x_axis) & length(combine_df$x_axis) == 8){
+   print("Light phase:")
+  emmeans_results <- emmeans(res.aov_light, ~ Geno | stage_sleep)
+  pairwise_results <- contrast(emmeans_results, method = "pairwise")
+  print(summary(pairwise_results))
+  print(" ")
+  print("Dark phase:")
+  emmeans_results <- emmeans(res.aov_dark, ~ Geno | stage_sleep)
+  pairwise_results <- contrast(emmeans_results, method = "pairwise")
+  print(summary(pairwise_results))
+ } else if (is.numeric(combine_df$x_axis_continuous)){
+  emmeans_results <- emmeans(res.aov2, ~ Geno | comp_)
+  pairwise_results <- contrast(emmeans_results, method = "pairwise")
+  summary(pairwise_results) 
  } else {print("Not implemented yet")}
 ```
