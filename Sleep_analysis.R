@@ -11,7 +11,7 @@ if(!require(openxlsx)){install.packages("openxlsx")}
 if(!require(ggplot2)){install.packages("ggplot2")}
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(lubridate)){install.packages("lubridate")}
-library(gtools)
+if(!require(gtools)){install.packages("gtools")}
 
 
 Sleep_preparation <- function(file_path) {
