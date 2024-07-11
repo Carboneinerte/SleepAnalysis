@@ -11,7 +11,7 @@ if(!require(openxlsx)){install.packages("openxlsx")}
 if(!require(ggplot2)){install.packages("ggplot2")}
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(lubridate)){install.packages("lubridate")}
-if(!require(gtools)){install.packages("gtools")}
+library(gtools)
 
 
 Sleep_preparation <- function(file_path) {
@@ -301,7 +301,7 @@ colnames(prewakesleep) <- paste0("wake-", sleep_duration_epoch:1)
 prewakesleep <- as.data.frame(prewakesleep)
 
 long_df = prewakesleep %>%
-      pivot_longer(all_of(colnameepo))
+      pivot_longer(cols = starts_with("Wake"),)
 
 frequency_df <- long_df %>%
        group_by(name, value) %>%
@@ -322,8 +322,56 @@ wide_df <- wide_df %>%
 
 addWorksheet(wb2, "Pre_wake")
 writeData(wb2, sheet = "Pre_wake" , x=wide_df)
-####
 
+###### Early sleep architecture
+sleep_duration_epoch = 12
+
+valid_indices <- which(bouts_df$durations == 1 & 
+                         lag(bouts_df$rodent_sleep, n = 1) == "W" & 
+                         lead(bouts_df$rodent_sleep, n = sleep_duration_epoch) == "S" &
+                         lead(bouts_df$durations, n = sleep_duration_epoch) == (sleep_duration_epoch+1))
+
+
+postwakesleep_list <- vector("list", length(valid_indices))
+# Loop through the valid indices
+for (idx in seq_along(valid_indices)) {
+  v <- valid_indices[idx]
+  idx_temp <- bouts_df$idx[v]
+  bouts_df_temp <- bouts_df[v:(v + sleep_duration_epoch),]
+  
+  # Extract relevant indices and handle NAs
+  idx_range <- (idx_temp+1):(idx_temp + sleep_duration_epoch)
+  temp <- ifelse(idx_range %in% bouts_df_temp$idx, 
+                 bouts_df_temp$rodent_sleep_cluster[match(idx_range, bouts_df_temp$idx)], 
+                 "NA")
+  
+  # Store the result in the list
+  postwakesleep_list[[idx]] <- temp
+}
+postwakesleep <- do.call(rbind, postwakesleep_list)
+
+colnames(postwakesleep) <- paste0("wake+", sleep_duration_epoch:1)
+postwakesleep <- as.data.frame(postwakesleep)
+
+long_df = postwakesleep %>%
+  pivot_longer(all_of(colnames(postwakesleep)))
+
+frequency_df <- long_df %>%
+  group_by(name, value) %>%
+  summarize(frequency = n(), .groups = 'drop')
+
+wide_df <- frequency_df %>%
+  pivot_wider(names_from = value, values_from = frequency, names_prefix = "cluster_")
+wide_df = wide_df %>%
+  mutate(num = as.numeric(gsub("wake+","",name))) %>%
+  arrange(num) %>%
+  select(-num) %>%
+  mutate(total_sleep_measured = nrow(postwakesleep))
+
+
+wide_df <- wide_df %>%
+  mutate(across(starts_with("cluster_"), ~ .x / total_sleep_measured * 100, .names = "{.col}-percent"))
+#####
 
 letter_changes <- bouts_df$rodent_sleep[c(TRUE, bouts_df$rodent_sleep[-1] != bouts_df$rodent_sleep[-nrow(bouts_df)])]
 
@@ -435,6 +483,42 @@ for (y in ZT){
                               "Bouts_S_n")
 }
 Bouts_ZT_Mean = cbind(Bouts_ZT_Mean, Bouts_mean_table)
+
+### SLeep transitions
+States = c("W","P","1","2","3","4","5","6")
+States_name = c("W","P","c1","c2","c3","c4","c5","c6")
+
+matrix_trans = matrix(0,8,8)
+colnames(matrix_trans) = States_name
+rownames(matrix_trans) = States_name
+
+for (i in 1:length(States)){
+  for (j in 1:length(States)){
+    temp = nrow(raw_data[raw_data$rodent_sleep_cluster == States[i] & lag(raw_data$rodent_sleep_cluster, n = 1) == States[j] 
+                         & raw_data$ZT < 12,] )
+    matrix_trans[i,j] = temp
+  }
+}
+heatmap(matrix_trans, Rowv = NA, Colv = NA)
+pheatmap(matrix_trans, display_numbers = T, scale = "column", order = NA, cluster_rows = F, cluster_cols = F)
+
+matrix2 = as.data.frame(matrix_trans)
+
+matrix2 = matrix2 %>% mutate(
+  W_percent = W / sum(W) * 100,
+  P_percent = P / sum(P) * 100,
+  c1_percent = c1 / sum(c1) * 100,
+  c2_percent = c2 / sum(c2) * 100,
+  c3_percent = c3 / sum(c3) * 100,
+  c4_percent = c4 / sum(c4) * 100,
+  c5_percent = c5 / sum(c5) * 100,
+  c6_percent = c6 / sum(c6) * 100,
+)
+
+matrix3 = data.frame(States_name,matrix2)
+
+addWorksheet(wb2, "Sleep-transition")
+writeData(wb2, sheet = "Sleep-transition" , x=matrix3)
  
 ### Wake event ###
 date_acute = unique(raw_data$date)
