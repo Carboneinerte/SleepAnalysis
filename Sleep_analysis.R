@@ -661,119 +661,119 @@ addWorksheet(wb2, "Bouts-First-Sleep-Wake")
 writeData(wb2, sheet="Bouts-First-Sleep-Wake", x=onset_date)
 
 # #### Loop #####
-# wb=createWorkbook()
-# col_=c(names(raw_data)[5:11],names(raw_data[28]))
-# 
-# aggre_date = data.frame()
-# for (t in date){
-#      date_ca = data.frame()
-#      date_ca = cbind(rep(t,length(ZT)))
-#      aggre_date = rbind(aggre_date,date_ca)
-# }
-# aggre_ZT = data.frame()
-# aggre_ZT= cbind(rep(ZT,length(date)))
-# 
-# all_aggregate = data.frame(aggre_date,aggre_ZT)
-# 
-# for (c in col_){
-#   Subset_raw = raw_data[,c("date","ZT",c)]
-#   for (t in date){
-#     #Loop_df = data.frame()
-#     count_table_temp = c()
-#     for (y in ZT) {
-#       count_temp = mean(Subset_raw[Subset_raw$ZT == y & Subset_raw$date == t,c])
-#       if (is.nan(count_temp)){
-#         count_temp = 0
-#         count_table_temp = c(count_table_temp, count_temp)
-#       }else{
-#       count_table_temp = c(count_table_temp, count_temp)
-#       }
-#     }
-#     #Loop_df = cbind(Loop_df, count_table_temp)
-#     Temp_sheet = paste0(t,"-", c)
-#     addWorksheet(wb, Temp_sheet)
-#     writeData(wb, sheet= Temp_sheet, x = count_table_temp)
-#   }
-#   
-#   Loop_df_one = data.frame()
-#   for (t in date){
-#     Temp_sheet = paste0(t,"-",c)
-#     temp4 = read.xlsx(wb, sheet=Temp_sheet, colNames = F)
-#     names(temp4) = c
-#     Loop_df_one = rbind(Loop_df_one,temp4)
-#   }
-#   all_aggregate = cbind(all_aggregate,Loop_df_one)
-# }
-# if (!is_empty(raw_data$Activity)){
-#   col_ = c(col_, "Activity")
-#   c = "Activity"
-#   for (t in date){
-#     #Loop_df = data.frame()
-#     count_table_temp = c()
-#     for (y in ZT) {
-#       count_temp = sum(raw_data$Activity[raw_data$ZT == y & raw_data$date == t])
-#       if (is.nan(count_temp)){
-#         count_temp = 0
-#         count_table_temp = c(count_table_temp, count_temp)
-#       }else{
-#         count_table_temp = c(count_table_temp, count_temp)
-#       }
-#     }
-#     #Loop_df = cbind(Loop_df, count_table_temp)
-#     Temp_sheet = paste0(t,"-", c)
-#     addWorksheet(wb, Temp_sheet)
-#     writeData(wb, sheet= Temp_sheet, x = count_table_temp)
-#   }
-#   
-#   Loop_df_one = data.frame()
-#   for (t in date){
-#     Temp_sheet = paste0(t,"-",c)
-#     temp4 = read.xlsx(wb, sheet=Temp_sheet, colNames = F)
-#     names(temp4) = c
-#     Loop_df_one = rbind(Loop_df_one,temp4)
-#   }
-#   all_aggregate = cbind(all_aggregate,Loop_df_one)
-# }
-#   all_aggregate = all_aggregate[all_aggregate$EMG_z !=0,]
-#   col_2 = c("Date","ZT",col_)
-#   names(all_aggregate) = col_2
-#   addWorksheet(wb2, "Other-All-Days")
-#   writeData(wb2, "Other-All-Days", x=all_aggregate)
-#   
-#   ### Mean by ZT
-#   Loop_ZT_Mean = data.frame(ZT)
-#   for (c in col_){
-#     Loop_mean_table = data.frame()
-#     for (y in ZT){
-#       Loop = c(mean(all_aggregate[all_aggregate$ZT == y,c]),
-#                #sd(all_aggregate[all_aggregate$ZT == y,c]),
-#                length(all_aggregate[all_aggregate$ZT==y,c])
-#       )
-#       
-#       Loop_mean_table = rbind(Loop_mean_table, Loop)
-#       names_mean = paste0(c,"_Mean")
-#       #names_SD = paste0(c,"_SD")
-#       names_n = paste0(c,"_N")
-#       names(Loop_mean_table) = c(names_mean,
-#                                  #names_SD,
-#                                  names_n)
-#     }
-#   Loop_ZT_Mean = cbind(Loop_ZT_Mean, Loop_mean_table)  
-#   }
-#   
-#   addWorksheet(wb2, "Other-ZT-Mean")
-#   writeData(wb2,"Other-ZT-Mean", x=Loop_ZT_Mean)
-#   
-#   ### Per Phase
-#   Phase_acti = c("Light","Dark")
-#   Acti = c(sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT < 12]),sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT >= 12]))
-#   Temp = c(mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT < 12]),mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT >= 12]))
-#   
-#   Phase_acti_df = data.frame(Phase_acti,Acti,Temp,count_phase, Wake_event_sum_phase_av)
-#   names(Phase_acti_df)= c("Phase","Activity","Temperature","Wake_event_mean","Wake_event_sum")
-#   
-#   addWorksheet(wb2, "Phase-Activity")
-#   writeData(wb2, "Phase-Activity", x= Phase_acti_df)
+wb=createWorkbook()
+col_=c(names(raw_data)[5:11],names(raw_data[28]))
+
+aggre_date = data.frame()
+for (t in date){
+     date_ca = data.frame()
+     date_ca = cbind(rep(t,length(ZT)))
+     aggre_date = rbind(aggre_date,date_ca)
+}
+aggre_ZT = data.frame()
+aggre_ZT= cbind(rep(ZT,length(date)))
+
+all_aggregate = data.frame(aggre_date,aggre_ZT)
+
+for (c in col_){
+  Subset_raw = raw_data[,c("date","ZT",c)]
+  for (t in date){
+    #Loop_df = data.frame()
+    count_table_temp = c()
+    for (y in ZT) {
+      count_temp = mean(Subset_raw[Subset_raw$ZT == y & Subset_raw$date == t,c])
+      if (is.nan(count_temp)){
+        count_temp = 0
+        count_table_temp = c(count_table_temp, count_temp)
+      }else{
+      count_table_temp = c(count_table_temp, count_temp)
+      }
+    }
+    #Loop_df = cbind(Loop_df, count_table_temp)
+    Temp_sheet = paste0(t,"-", c)
+    addWorksheet(wb, Temp_sheet)
+    writeData(wb, sheet= Temp_sheet, x = count_table_temp)
+  }
+
+  Loop_df_one = data.frame()
+  for (t in date){
+    Temp_sheet = paste0(t,"-",c)
+    temp4 = read.xlsx(wb, sheet=Temp_sheet, colNames = F)
+    names(temp4) = c
+    Loop_df_one = rbind(Loop_df_one,temp4)
+  }
+  all_aggregate = cbind(all_aggregate,Loop_df_one)
+}
+if (!is_empty(raw_data$Activity)){
+  col_ = c(col_, "Activity")
+  c = "Activity"
+  for (t in date){
+    #Loop_df = data.frame()
+    count_table_temp = c()
+    for (y in ZT) {
+      count_temp = sum(raw_data$Activity[raw_data$ZT == y & raw_data$date == t])
+      if (is.nan(count_temp)){
+        count_temp = 0
+        count_table_temp = c(count_table_temp, count_temp)
+      }else{
+        count_table_temp = c(count_table_temp, count_temp)
+      }
+    }
+    #Loop_df = cbind(Loop_df, count_table_temp)
+    Temp_sheet = paste0(t,"-", c)
+    addWorksheet(wb, Temp_sheet)
+    writeData(wb, sheet= Temp_sheet, x = count_table_temp)
+  }
+
+  Loop_df_one = data.frame()
+  for (t in date){
+    Temp_sheet = paste0(t,"-",c)
+    temp4 = read.xlsx(wb, sheet=Temp_sheet, colNames = F)
+    names(temp4) = c
+    Loop_df_one = rbind(Loop_df_one,temp4)
+  }
+  all_aggregate = cbind(all_aggregate,Loop_df_one)
+}
+  all_aggregate = all_aggregate[all_aggregate$EMG_z !=0,]
+  col_2 = c("Date","ZT",col_)
+  names(all_aggregate) = col_2
+  addWorksheet(wb2, "Other-All-Days")
+  writeData(wb2, "Other-All-Days", x=all_aggregate)
+
+  ### Mean by ZT
+  Loop_ZT_Mean = data.frame(ZT)
+  for (c in col_){
+    Loop_mean_table = data.frame()
+    for (y in ZT){
+      Loop = c(mean(all_aggregate[all_aggregate$ZT == y,c]),
+               #sd(all_aggregate[all_aggregate$ZT == y,c]),
+               length(all_aggregate[all_aggregate$ZT==y,c])
+      )
+
+      Loop_mean_table = rbind(Loop_mean_table, Loop)
+      names_mean = paste0(c,"_Mean")
+      #names_SD = paste0(c,"_SD")
+      names_n = paste0(c,"_N")
+      names(Loop_mean_table) = c(names_mean,
+                                 #names_SD,
+                                 names_n)
+    }
+  Loop_ZT_Mean = cbind(Loop_ZT_Mean, Loop_mean_table)
+  }
+
+  addWorksheet(wb2, "Other-ZT-Mean")
+  writeData(wb2,"Other-ZT-Mean", x=Loop_ZT_Mean)
+
+  ### Per Phase
+  Phase_acti = c("Light","Dark")
+  Acti = c(sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT < 12]),sum(Loop_ZT_Mean$Activity_Mean[Loop_ZT_Mean$ZT >= 12]))
+  Temp = c(mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT < 12]),mean(Loop_ZT_Mean$Temp_Mean[Loop_ZT_Mean$ZT >= 12]))
+
+  Phase_acti_df = data.frame(Phase_acti,Acti,Temp,count_phase, Wake_event_sum_phase_av)
+  names(Phase_acti_df)= c("Phase","Activity","Temperature","Wake_event_mean","Wake_event_sum")
+
+  addWorksheet(wb2, "Phase-Activity")
+  writeData(wb2, "Phase-Activity", x= Phase_acti_df)
 
 #### Output file #####
 base_folder = getwd()
