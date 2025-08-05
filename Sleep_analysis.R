@@ -388,20 +388,20 @@ bouts_df$max_dur[nrow(bouts_df)] = bouts_df$durations[nrow(bouts_df)]
 bouts_df_co = data.frame(bouts_df$date,bouts_df$hour,bouts_df$ZT,bouts_df$rodent_sleep,bouts_df$max_dur)
 bouts_df_co = bouts_df_co[complete.cases(bouts_df_co), ]
 names(bouts_df_co) = c("Date","Hour","ZT","Sleep_state","Bouts_Duration")
-bouts_df_co$'Duration (min)' = bouts_df_co$`Bouts_Duration`*(1/6)
+bouts_df_co$'Duration (s)' = bouts_df_co$`Bouts_Duration`* 2
 bouts_df_co_S = bouts_df_co[bouts_df_co$Sleep_state == "S",]
 bouts_df_co_S = arrange(bouts_df_co_S, ZT)
 bouts_df_co_W = bouts_df_co[bouts_df_co$Sleep_state == "W",]
 bouts_df_co_W = arrange(bouts_df_co_W, ZT)
 
 # Bouts density by total length
-Breaks =c("0-.5","0.5-1","1-2","2-4","4-8","8-16","16-32","32+")
+Breaks =c("0-10s","10-20s","20-30s","30-60s","60-90s","90-150s","150-240","240s+")
 Breaks_ep_co =data.frame()
 
 for (d_ in date){
 date_ep = rep(d_, length(Breaks))
 Breaks_ep = data.frame(date_ep, Breaks)
-breaks_df =data.frame(f_=c(0,3,6,12,24,48,96,192), l_=c(3,6,12,24,48,96,192,600))
+breaks_df =data.frame(f_=c(0,5,10,15,30,45,75,120), l_=c(5,10,15,30,45,75,120,600))
 Combi = c()
   if (nrow(bouts_df_co_S[bouts_df_co_S$Date == d_ & bouts_df_co_S$ZT == 22,]>0)){
     for (n in 1:nrow(breaks_df)){
@@ -433,9 +433,9 @@ Combi = c()
 
 Breaks_ep = cbind(Breaks_ep,Combi)
 rownames(Breaks_ep)=NULL
-names(Breaks_ep) = c('Date','Breaks(min)','Light_Phase_ep','Dark_Phase_ep')
-Breaks_ep$Light_phase_min = Breaks_ep$Light_Phase_ep*(1/6)
-Breaks_ep$Dark_phase_min = Breaks_ep$Dark_Phase_ep*(1/6)
+names(Breaks_ep) = c('Date','Breaks(s)','Light_Phase_ep','Dark_Phase_ep')
+Breaks_ep$Light_phase_min = Breaks_ep$Light_Phase_ep*2
+Breaks_ep$Dark_phase_min = Breaks_ep$Dark_Phase_ep*2
 
 Breaks_ep_co = rbind(Breaks_ep_co, Breaks_ep)
 
@@ -445,15 +445,15 @@ Breaks_ep_co = rbind(Breaks_ep_co, Breaks_ep)
 Light_mean = c()
 Dark_mean = c()
 for (n in Breaks){
-  Temp = mean(Breaks_ep_co$Light_Phase_ep[Breaks_ep_co$`Breaks(min)` == n], na.rm = T)
+  Temp = mean(Breaks_ep_co$Light_Phase_ep[Breaks_ep_co$`Breaks(s)` == n], na.rm = T)
   Light_mean = c(Light_mean, Temp)
-  Temp = mean(Breaks_ep_co$Dark_Phase_ep[Breaks_ep_co$`Breaks(min)` == n], na.rm = T)
+  Temp = mean(Breaks_ep_co$Dark_Phase_ep[Breaks_ep_co$`Breaks(s)` == n], na.rm = T)
   Dark_mean = c(Dark_mean, Temp)
 }
 Breaks_Mean = data.frame(Breaks,Light_mean,Dark_mean)
-names(Breaks_Mean) = c('Breaks(min)','Light_phase_ep','Dark_phase_ep')
-Breaks_Mean$Light_phase_min = Breaks_Mean$Light_phase_ep*(1/6)
-Breaks_Mean$Dark_phase_min = Breaks_Mean$Dark_phase_ep*(1/6)
+names(Breaks_Mean) = c('Breaks(s)','Light_phase_ep','Dark_phase_ep')
+Breaks_Mean$Light_phase_min = Breaks_Mean$Light_phase_ep*2
+Breaks_Mean$Dark_phase_min = Breaks_Mean$Dark_phase_ep*2
 Breaks_Mean$Light_phase_h = Breaks_Mean$Light_phase_min / 60
 Breaks_Mean$Dark_phase_h = Breaks_Mean$Dark_phase_min / 60
 
@@ -461,24 +461,24 @@ Breaks_Mean$Dark_phase_h = Breaks_Mean$Dark_phase_min / 60
 Bouts_ZT_Mean = data.frame(ZT)
 Bouts_mean_table = data.frame()
 for (y in ZT){
-  Bouts = c(mean(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
-            median(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
-            max(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
+  Bouts = c(mean(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
+            median(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
+            max(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
             # sd(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "W"]),
-            length(bouts_df_co$'Duration (min)'[bouts_df_co$ZT==y & bouts_df_co$Sleep_state == "W"]),
-            mean(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
-            median(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
-            max(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
+            length(bouts_df_co$'Duration (s)'[bouts_df_co$ZT==y & bouts_df_co$Sleep_state == "W"]),
+            mean(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
+            median(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
+            max(bouts_df_co$'Duration (s)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
             # sd(bouts_df_co$'Duration (min)'[bouts_df_co$ZT == y & bouts_df_co$Sleep_state == "S"]),
-            length(bouts_df_co$'Duration (min)'[bouts_df_co$ZT==y & bouts_df_co$Sleep_state == "S"])
+            length(bouts_df_co$'Duration (s)'[bouts_df_co$ZT==y & bouts_df_co$Sleep_state == "S"])
   )
   
   Bouts_mean_table = rbind(Bouts_mean_table, Bouts)
 
-  names(Bouts_mean_table) = c("Bouts_W_Mean (min)","Bouts_W_Median (min)","Bouts_W_Max (min)",
+  names(Bouts_mean_table) = c("Bouts_W_Mean (s)","Bouts_W_Median (s)","Bouts_W_Max (s)",
                               #"Bouts_W_SD",
                               "Bouts_W_n",
-                              "Bouts_S_Mean (min)","Bouts_S_Median (min)","Bouts_S_Max (min)",
+                              "Bouts_S_Mean (s)","Bouts_S_Median (s)","Bouts_S_Max (s)",
                               #"Bouts_S_SD",
                               "Bouts_S_n")
 }
