@@ -489,13 +489,25 @@ States = c("W","P","1","2","3","4","5","6")
 States_name = c("W","P","c1","c2","c3","c4","c5","c6")
 
 matrix_trans = matrix(0,8,8)
+matrix_trans_light = matrix(0,8,8)
+matrix_trans_dark = matrix(0,8,8)
 colnames(matrix_trans) = States_name
 rownames(matrix_trans) = States_name
+colnames(matrix_trans_light) = States_name
+rownames(matrix_trans_light) = States_name
+colnames(matrix_trans_dark) = States_name
+rownames(matrix_trans_dark) = States_name
 
 for (i in 1:length(States)){
   for (j in 1:length(States)){
-    temp = nrow(raw_data[raw_data$rodent_sleep_cluster == States[i] & lag(raw_data$rodent_sleep_cluster, n = 1) == States[j] 
+    temp_light = nrow(raw_data[raw_data$rodent_sleep_cluster == States[i] & lag(raw_data$rodent_sleep_cluster, n = 1) == States[j] 
                          & raw_data$ZT < 12,] )
+    temp_dark = nrow(raw_data[raw_data$rodent_sleep_cluster == States[i] & lag(raw_data$rodent_sleep_cluster, n = 1) == States[j] 
+                               & raw_data$ZT >= 12,] )
+    temp = nrow(raw_data[raw_data$rodent_sleep_cluster == States[i] & lag(raw_data$rodent_sleep_cluster, n = 1) == States[j], ])
+    
+    matrix_trans_light[i,j] = temp_light
+    matrix_trans_dark[i,j] = temp_dark
     matrix_trans[i,j] = temp
   }
 }
@@ -517,8 +529,48 @@ matrix2 = matrix2 %>% mutate(
 
 matrix3 = data.frame(States_name,matrix2)
 
-addWorksheet(wb2, "Sleep-transition")
-writeData(wb2, sheet = "Sleep-transition" , x=matrix3)
+###
+
+matrix2_light = as.data.frame(matrix_trans_light)
+
+matrix2_light = matrix2_light %>% mutate(
+  W_percent = W / sum(W) * 100,
+  P_percent = P / sum(P) * 100,
+  c1_percent = c1 / sum(c1) * 100,
+  c2_percent = c2 / sum(c2) * 100,
+  c3_percent = c3 / sum(c3) * 100,
+  c4_percent = c4 / sum(c4) * 100,
+  c5_percent = c5 / sum(c5) * 100,
+  c6_percent = c6 / sum(c6) * 100,
+)
+
+matrix3_light = data.frame(States_name,matrix2_light)
+
+###
+
+matrix2_dark = as.data.frame(matrix_trans_dark)
+
+matrix2_dark = matrix2_dark %>% mutate(
+  W_percent = W / sum(W) * 100,
+  P_percent = P / sum(P) * 100,
+  c1_percent = c1 / sum(c1) * 100,
+  c2_percent = c2 / sum(c2) * 100,
+  c3_percent = c3 / sum(c3) * 100,
+  c4_percent = c4 / sum(c4) * 100,
+  c5_percent = c5 / sum(c5) * 100,
+  c6_percent = c6 / sum(c6) * 100,
+)
+
+matrix3_dark = data.frame(States_name,matrix2_dark)
+
+addWorksheet(wb2, "Sleep-transition-all")
+writeData(wb2, sheet = "Sleep-transition-all" , x=matrix3)
+
+addWorksheet(wb2, "Sleep-transition-light")
+writeData(wb2, sheet = "Sleep-transition-light" , x=matrix3_light)
+
+addWorksheet(wb2, "Sleep-transition-dark")
+writeData(wb2, sheet = "Sleep-transition-dark" , x=matrix3_dark)
  
 ### Wake event ###
 date_acute = unique(raw_data$date)
