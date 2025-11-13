@@ -1,0 +1,189 @@
+
+###Part 1 — Wavelet analysis and save CSV
+
+```{r}
+# --- User-defined settings ---
+file_path     <- “/Users/lauravanrosmalen/Documents/LAURA /SALK/Experiments/07_TSE_Temp_cycle_2024/data/EEG_LD_20250301/All_Sleep_State_Statistic_ZT_combined_for_wavelet.xlsx”
+sheet_name    <- “Wavelet”
+time_column   <- “ZT_cum”
+id_column     <- “ID_2"
+output_folder <- “/Users/lauravanrosmalen/Documents/LAURA /SALK/Experiments/07_TSE_Temp_cycle_2024/data/EEG_LD_20250301/_Wavelet_Output”
+signal_cols   <- c(“Wake”, “NREM”, “REM”, “NREM_1”, “NREM_2", “NREM_3”, “NREM_4", “NREM_5”, “NREM_6", “Sleep”)
+period_range  <- c(20, 28)
+
+# --- Libraries ---
+library(readxl)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(WaveletComp)
+library(purrr)dir.create(output_folder, showWarnings = FALSE)
+
+# --- Read and tidy data ---
+data <- read_excel(file_path, sheet = sheet_name)data_long <- data %>%
+  pivot_longer(cols = all_of(signal_cols), names_to = “signal”, values_to = “value”) %>%
+  rename(time = all_of(time_column), ID = all_of(id_column)) %>%
+  filter(!is.na(value)) %>%
+  mutate(group = sub(“^.*_([^_]+)$“, “\\1”, ID))
+
+# --- Helper functions ---
+circular_mean_hours <- function(hours) {
+  hours <- hours[!is.na(hours)]
+  if(length(hours) == 0) return(NA_real_)
+  angles <- hours / 24 * 2 * pi
+  mean_sin <- mean(sin(angles))
+  mean_cos <- mean(cos(angles))
+  mean_angle <- atan2(mean_sin, mean_cos)
+  if(mean_angle < 0) mean_angle <- mean_angle + 2*pi
+  (mean_angle / (2*pi)) * 24
+}circular_sd_hours <- function(hours) {
+  hours <- hours[!is.na(hours)]
+  if(length(hours) <= 1) return(NA_real_)
+  angles <- hours / 24 * 2 * pi
+  R <- sqrt(mean(sin(angles))^2 + mean(cos(angles))^2)
+  if(is.na(R) || R <= .Machine$double.eps) return(NA_real_)
+  sd_angle <- sqrt(-2 * log(R))
+  (sd_angle / (2*pi)) * 24
+}
+
+# --- Wavelet extraction function ---
+extract_phases <- function(df, period_range) {
+  dt <- mean(diff(df$time))
+  wavelet_df <- df %>% mutate(wavelet_signal = value)  wt <- analyze.wavelet(wavelet_df, “wavelet_signal”, dt = dt, loess.span = 0, dj = 1/20)
+  recon <- reconstruct(wt, sel.period = period_range)
+  df$recon_signal <- recon$series$wavelet_signal.r
+  df$day <- floor(df$time / 24) + 1  peak <- df %>%
+    group_by(day) %>%
+    slice_max(order_by = recon_signal, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    mutate(phase_type = “peak”, phase_time = time %% 24)  nadir <- df %>%
+    group_by(day) %>%
+    slice_min(order_by = recon_signal, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    mutate(phase_type = “nadir”, phase_time = time %% 24)  bind_rows(peak, nadir) %>%
+    select(ID, signal, group, day, phase_type, phase_time, phase_value = recon_signal)
+}
+
+# --- Apply extraction per signal & ID ---
+results <- data_long %>%
+  group_by(signal, ID) %>%
+  group_split() %>%
+  map_dfr(~ extract_phases(.x, period_range))
+
+# --- Compute summary for all groups ---
+summary_all <- results %>%
+  group_by(signal, group, day, phase_type) %>%
+  summarise(
+    n = sum(!is.na(phase_time)),
+    mean_phase = circular_mean_hours(phase_time),
+    sd_hours   = circular_sd_hours(phase_time),
+    sem_phase  = ifelse(is.na(sd_hours) | n <= 1, NA_real_, sd_hours / sqrt(n)),
+    .groups = “drop”
+  ) %>%
+  mutate(mean_phase = mean_phase %% 24) %>%
+  select(-sd_hours)
+
+# --- Compute reference phases ---
+ref_table <- summary_all %>%
+  filter((phase_type == “peak” & day == 2) | (phase_type == “nadir” & day == 3)) %>%
+  mutate(ref_phase = (mean_phase + 12) %% 24) %>%
+  select(signal, group, phase_type, ref_phase)# --- Save results ---
+write_csv(results, file.path(output_folder, “wavelet_phase_results.csv”))
+write_csv(summary_all, file.path(output_folder, “summary_all_groups.csv”))
+write_csv(ref_table, file.path(output_folder, “ref_table.csv”))
+```
+### Part 2 — Import CSV, compute summary, and plot
+
+```{r}
+# --- User-defined settings ---
+output_folder <- “/Users/lauravanrosmalen/Documents/LAURA /SALK/Experiments/07_TSE_Temp_cycle_2024/data/EEG_LD_20250301/_Wavelet_Output”
+selected_groups <- c(“ALF”, “TRF”, “RW”)   # <- change to single or multiple groups
+group_colors <- c(“ALF” = “black”, “TRF” = “purple”, “RW” = “blue”)
+
+# --- Libraries ---
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+
+# --- Load precomputed CSVs ---
+summary_plot <- read_csv(file.path(output_folder, “summary_plot_data.csv”))
+ref_table    <- read_csv(file.path(output_folder, “ref_table.csv”))
+
+# --- Keep only selected groups ---
+summary_plot <- summary_plot %>% filter(group %in% selected_groups)
+ref_table    <- ref_table %>% filter(group %in% selected_groups)
+
+# --- Plot per signal ---
+walk(unique(summary_plot$signal), function(sig) {
+  plot_data_all <- filter(summary_plot, signal == sig) %>%
+    mutate(day_shifted = ifelse(phase_type == “nadir”, day - 1, day))  phase_list <- c(“peak”, “nadir”)
+  plots <- list()  for(pt in phase_list){
+    sub_data <- filter(plot_data_all, phase_type == pt)
+    if(nrow(sub_data) == 0) next    # join reference table (fixed for selected group only)
+    sub_data <- left_join(sub_data, ref_table %>% filter(signal == sig, phase_type == pt),
+                          by = c(“signal”, “group”, “phase_type”))
+    sub_data <- sub_data %>%
+      mutate(phase_diff = ((mean_phase - ref_phase + 12) %% 24) - 12)    # vline data only for selected group(s)
+    vline_data <- ref_table %>% filter(signal == sig, phase_type == pt)    # --- Build plot with shifted light/dark rectangles ---
+    p <- ggplot(sub_data, aes(y = day_shifted, x = mean_phase, color = group, fill = group)) +      # Shaded background rectangles
+      geom_rect(aes(ymin = -Inf, ymax = 3, xmin = 12, xmax = 24),
+                inherit.aes = FALSE, fill = “#E5E5E5
+”, color = NA) +
+      geom_rect(aes(ymin = -Inf, ymax = 2, xmin = 36, xmax = Inf),
+                inherit.aes = FALSE, fill = “#E5E5E5
+", color = NA) +
+      geom_rect(aes(ymin = 2, ymax = Inf, xmin = 24, xmax = 36),
+                inherit.aes = FALSE, fill = “#E5E5E5
+”, color = NA) +
+      geom_rect(aes(ymin = 3, ymax = Inf, xmin = 0, xmax = 12),
+                inherit.aes = FALSE, fill = “#E5E5E5
+", color = NA) +      # data points + error bars
+      geom_errorbarh(aes(xmin = mean_phase - sem_phase, xmax = mean_phase + sem_phase),
+                     height = 0.2) +
+      geom_point(shape = ifelse(pt == “peak”, 24, 25), size = 3) +      # add reference lines only for selected group(s)
+      {if(nrow(vline_data) > 0) geom_vline(data = vline_data, aes(xintercept = ref_phase, color = group),
+                                           linetype = “dashed”, linewidth = 0.8, show.legend = FALSE)} +      # Axis scales
+      scale_x_continuous(name = “ZT (h)“,
+                         breaks = seq(0,24,6),
+                         labels = function(x) x %% 24,
+                         limits = c(0,24),
+                         expand = c(0,0)) +
+      scale_y_continuous(name = “Day”,
+                         breaks = seq(min(sub_data$day_shifted), max(sub_data$day_shifted), 1),
+                         labels = function(x) x - 3,
+                         expand = c(0,0),
+                         trans = “reverse”,
+                         limits = c(9, 1)) +      # Colors
+      scale_color_manual(values = group_colors[selected_groups]) +
+      scale_fill_manual(values = group_colors[selected_groups]) +      # Theme
+theme_minimal(base_size = 20) +  # sets base font size for text
+theme(
+  panel.grid = element_blank(),
+  legend.position = “right”,
+  panel.border = element_rect(colour = “black”, fill = NA, linewidth = 1),
+  axis.line = element_line(colour = “black”, linewidth = 0.8),
+  axis.ticks = element_line(colour = “black”),
+  axis.ticks.length = unit(0.25, “cm”),
+  axis.title = element_text(size = 20),     # axis titles
+  axis.text  = element_text(size = 20),     # axis labels
+  legend.text = element_text(size = 20),    # legend labels
+  legend.title = element_text(size = 20),   # legend title
+  plot.title = element_text(size = 20)      # plot title
+) +
+      labs(title = paste(“Signal:“, sig, “| Phase:“, pt))    plots[[pt]] <- p
+  }  # Combine peak/nadir
+  peak_plot  <- plots[[“peak”]]
+  nadir_plot <- plots[[“nadir”]]  if(inherits(peak_plot,“ggplot”) & inherits(nadir_plot,“ggplot”)){
+    combined_plot <- peak_plot / nadir_plot
+    ggsave(file.path(output_folder, paste0(“summary_plot_“, sig, “_ALF.png”)),
+           plot = combined_plot, width = 7, height = 10)
+  } else if(inherits(peak_plot,“ggplot”)){
+    ggsave(file.path(output_folder, paste0(“summary_plot_“, sig, “_peak_only.png”)),
+           plot = peak_plot, width = 7, height = 5)
+  } else if(inherits(nadir_plot,“ggplot”)){
+    ggsave(file.path(output_folder, paste0(“summary_plot_“, sig, “_nadir_only.png”)),
+           plot = nadir_plot, width = 7, height = 5)
+  }
+})
+```
